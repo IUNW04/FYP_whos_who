@@ -1,0 +1,25 @@
+{% extends 'WhosWhoApp/base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-indigo-600 mb-4">
+            <i class="fas fa-history mr-2"></i>Chat History
+        </h1>
+        <div class="text-gray-600 text-center py-8">
+            <i class="fas fa-comments text-4xl mb-4 text-indigo-300"></i>
+            <p>Chat history functionality coming soon...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+    <title>Chat History - Who's Who</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block nav %}
+    {% include 'WhosWhoApp/nav.html' %}
+{% endblock %}

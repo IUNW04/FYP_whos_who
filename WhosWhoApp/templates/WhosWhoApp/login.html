@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Who's Who</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+            <div class="logo-container text-center">
+
+                <div class="logo-square mx-auto">
+                    <div class="logo-bars">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                </div>
+                <div class="main-text text-xl font-bold text-gray-800">WHO'S WHO?</div>
+                <div class="sub-text text-xs text-gray-500">THE AI POWERED STAFF DIRECTORY</div>
+            </div>
+
+            {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="p-4 mb-4 text-sm {% if message.tags == 'error' %}text-red-700 bg-red-100{% else %}text-green-700 bg-green-100{% endif %} rounded-lg">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="flex border-b border-gray-200">
+
+                <button onclick="switchTab('login')" 
+                        class="tab-button flex-1 py-2 px-4 text-center border-b-2 font-medium text-sm transition-all duration-200"
+                        id="login-tab">
+                    Sign In
+                </button>
+                <button onclick="switchTab('signup')" 
+                        class="tab-button flex-1 py-2 px-4 text-center border-b-2 font-medium text-sm transition-all duration-200"
+                        id="signup-tab">
+                    Sign Up
+                </button>
+            </div>
+
+            <div id="login-content" class="tab-content">
+
+                <form method="POST" action="{% url 'login' %}" class="space-y-6">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" name="username" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" name="password" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm">
+                            <a href="{% url 'password_reset' %}" class="font-medium text-indigo-600 hover:text-indigo-500">
+                                Forgot your password?
+                            </a>
+                        </div>
+                    </div>
+                    <button type="submit" 
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Sign In
+                    </button>
+                </form>
+            </div>
+
+            <div id="signup-content" class="tab-content hidden">
+
+                <form method="POST" action="{% url 'signup' %}" class="space-y-6">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" name="username" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" name="email" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" name="password1" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                        <input type="password" name="password2" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" 
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Sign Up
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .logo-square {
+        width: 42px;
+        height: 42px;
+        background: linear-gradient(135deg, #7352E9 0%, #3457DC 100%);
+        position: relative;
+        margin-bottom: 6px;
+        margin-top: 6px;  
+    }
+    .logo-bars {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        gap: 5px;
+    }
+    .bar {
+        width: 5px;
+        height: 17px;
+        background-color: white;
+        border-radius: 3px;
+    }
+    .main-text {
+        font-size: 13.5px;
+        font-weight: bold;
+        color: #3457DC;
+        letter-spacing: 1px;
+        margin-bottom: 0.1px;
+        margin-top: -5px;
+    }
+    .sub-text {
+        font-size: 5px;
+        color: #3457DC;
+        letter-spacing: 2.5px;
+        text-transform: uppercase;
+        text-align: center;
+        max-width: 180px;
+        line-height: 0.8;
+        margin: 0 auto;  
+        display: block;  
+    }
+    .tab-button {
+        color: #6B7280;
+        border-color: transparent;
+    }
+    .tab-button.active {
+        color: #4F46E5;
+        border-color: #4F46E5;
+    }
+    </style>
+
+    <script>
+    window.addEventListener('pageshow', function(event) {
+
+        if (event.persisted) {
+            window.location.reload();
+        }
+    });
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+        document.getElementById(`${tab}-tab`).classList.add('active');
+
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        document.getElementById(`${tab}-content`).classList.remove('hidden');
+    }
+
+    switchTab('login');
+    </script>
+</body>
+</html>

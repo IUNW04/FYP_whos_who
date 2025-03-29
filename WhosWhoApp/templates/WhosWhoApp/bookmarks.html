@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookmarks - Who's Who</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .staff-card {
+            position: relative;
+        }
+        .bookmark-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    {% include 'WhosWhoApp/nav.html' %}
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-indigo-600">
+                    <i class="fas fa-bookmark mr-2"></i>Bookmarks
+                </h1>
+                <a href="{% url 'home' %}" class="flex items-center text-indigo-600 hover:text-indigo-800">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Directory
+                </a>
+            </div>
+            
+            {% if bookmarks %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for staff in bookmarks %}
+                        <div class="staff-card bg-white rounded-lg shadow p-4">
+                            <button onclick="toggleBookmark(event, '{{ staff.id }}')" 
+                                    class="bookmark-btn p-2 rounded-full hover:bg-gray-100">
+                                <i class="fas fa-bookmark text-indigo-600"></i>
+                            </button>
+                            <a href="{% url 'staff_profile' pk=staff.id %}" class="block">
+                                <div class="staff-header">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-indigo-100">
+
+                                            {% if staff.profile_picture %}
+                                                <img src="{{ staff.profile_picture.url }}" 
+                                                     alt="{{ staff.name }}"
+                                                     class="w-full h-full object-cover">
+                                            {% else %}
+                                                <div class="w-full h-full bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center">
+                                                    <i class="fas fa-user text-indigo-300"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+
+                                            <h3 class="font-semibold text-gray-900">{{ staff.name }}</h3>
+                                            <p class="text-indigo-600 text-sm">{{ staff.role }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center text-gray-500 mt-8">
+                    <p>No bookmarked staff members yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function toggleBookmark(event, staffId) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            fetch(`/toggle_bookmark/${staffId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

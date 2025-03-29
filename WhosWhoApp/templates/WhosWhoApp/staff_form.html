@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Admin Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+            <div>
+                <h2 class="text-center text-3xl font-extrabold text-gray-900">{{ title }}</h2>
+            </div>
+            <form method="POST" enctype="multipart/form-data" class="mt-8 space-y-6">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 gap-6 mt-4">
+
+                    {% for field in form %}
+                        {% if field.name != 'username' and field.name != 'password' and field.name != 'confirm_password' and field.name != 'is_staff' and 'hours' not in field.name %}
+                        <div>
+                            {% if field.name == 'about_me' or field.name == 'bio' %}
+                            <div class="space-y-2">
+                                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    {{ field.label }}
+                                </label>
+                                <textarea 
+                                    id="{{ field.id_for_label }}"
+                                    name="{{ field.name }}"
+                                    rows="6"
+                                    class="mt-1 block w-full rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm transition duration-150 ease-in-out placeholder-gray-400 resize-none hover:border-gray-400"
+                                    placeholder="{% if field.name == 'bio' %}Enter a brief bio...{% else %}Tell us about yourself, your role, and what you do...{% endif %}"
+                                >{{ field.value|default:'' }}</textarea>
+                                {% if field.errors %}
+                                <p class="mt-1 text-sm text-red-600">
+                                    {{ field.errors }}
+                                </p>
+                                {% endif %}
+                                {% if field.help_text %}
+                                <p class="mt-1 text-sm text-gray-500">
+                                    {{ field.help_text }}
+                                </p>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="mt-1 text-red-500 text-sm">
+                                {{ field.errors }}
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Office Hours</h3>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Monday</label>
+                            {{ form.monday_hours }}
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tuesday</label>
+                            {{ form.tuesday_hours }}
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Wednesday</label>
+                            {{ form.wednesday_hours }}
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Thursday</label>
+                            {{ form.thursday_hours }}
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Friday</label>
+                            {{ form.friday_hours }}
+                        </div>
+                    </div>
+                </div>
+
+                {% if title == 'Add Staff' %}
+
+                <div class="mt-4 space-y-4 border-t pt-4">
+                    <h3 class="text-lg font-medium text-gray-900">Account Credentials</h3>
+                    <p class="text-sm text-gray-500">Create login credentials for the staff member</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+
+                            <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                Username
+                            </label>
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                            <div class="mt-1 text-red-500 text-sm">
+                                {{ form.username.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                            <div class="mt-1 text-red-500 text-sm">
+                                {{ form.password.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.confirm_password.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                Confirm Password
+                            </label>
+                            {{ form.confirm_password }}
+                            {% if form.confirm_password.errors %}
+                            <div class="mt-1 text-red-500 text-sm">
+                                {{ form.confirm_password.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="flex items-center">
+                            {{ form.is_staff }}
+                            <label for="{{ form.is_staff.id_for_label }}" class="ml-2 block text-sm text-gray-900">
+                                Grant staff access (can log in and manage their profile)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="flex justify-end mt-6 space-x-4">
+                    <a href="{% url 'admin_dashboard' %}" 
+                       class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        {{ title }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+Django>=4.2.3
+django-crispy-forms
+Pillow
+python-dotenv
+requests
+gunicorn
+whitenoise
+psycopg2-binary
+dj-database-url
+huggingface-hub
+tenacity
+pandas
+xlsxwriter
+openpyxl
+django-cloudinary-storage>=0.3.0
+cloudinary>=1.32.0
