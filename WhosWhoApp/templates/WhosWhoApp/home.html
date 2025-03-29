@@ -1,0 +1,1280 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Directory v4</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+    <link href="{% static 'css/homestyles.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <style>
+
+        .search-filter-section {
+            position: relative;
+        }
+
+        #advancedFilters {
+            position: relative;
+            background: white;
+        }
+
+        .custom-dropdown {
+            position: relative;
+            min-width: 200px;
+        }
+
+        .dropdown-trigger {
+            flex: 1;
+            text-align: left;
+            padding: 0.5rem;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.375rem;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.375rem;
+            margin-top: 0.25rem;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-buttons-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+
+
+
+
+
+        .dropdown-content.show {
+            display: block;
+        }
+
+        .dropdown-search {
+            padding: 0.5rem;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .dropdown-search input {
+            width: 100%;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.25rem;
+        }
+
+        .checkbox-list {
+            padding: 0.5rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 0.375rem;
+            cursor: pointer;
+        }
+
+        .checkbox-item:hover {
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        .selected-count {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: #4F46E5;
+            padding: 0.125rem 0.375rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .selected-text {
+            margin-left: 0.5rem;
+            font-size: 0.875rem;
+            color: #4B5563;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+            .custom-dropdown {
+                width: 100%;
+            }
+            
+            .dropdown-trigger {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .dropdown-content {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin: 0;
+                border-radius: 1rem 1rem 0 0;
+                max-height: 80vh;
+                border-bottom: none;
+            }
+        }
+
+        .scrollable-filter-content {
+            position: relative;
+        }
+        
+        .filter-section .overflow-y-auto {
+            max-height: 192px;
+            overflow-y: auto;
+            padding-right: 8px;
+            padding-bottom: 32px;
+            scroll-behavior: smooth;
+            position: relative;
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 8px;
+            height: 40px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.95) 40%, rgba(255,255,255,1));
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scroll-text {
+            color: #9CA3AF; /* Lighter gray */
+            font-size: 12px;
+            font-weight: 400;
+            opacity: 0.9;
+            animation: float-text 2s ease-in-out infinite;
+        }
+
+        @keyframes float-text {
+            0%, 100% { transform: translateY(0); opacity: 0.9; }
+            50% { transform: translateY(3px); opacity: 0.7; }
+        }
+
+
+        .filter-section .scroll-hint {
+            visibility: hidden;
+        }
+
+        .filter-section.can-scroll .scroll-hint {
+            visibility: visible;
+        }
+
+        .filter-section.at-bottom .scroll-hint {
+            visibility: hidden;
+        }
+
+        .show-more {
+
+            margin-top: 8px;
+            padding: 4px;
+            transition: 0.2s ease;
+        }
+
+        .show-more:hover {
+            background: #F3F4F6;
+            border-radius: 4px;
+        }
+
+        .chat-container {
+            z-index: 1000;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .chat-container.show {
+            visibility: visible;
+            transform: scale(1) !important;
+            opacity: 1 !important;
+        }
+
+        .message {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background-color: #4F46E5;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.ai {
+            background-color: #F3F4F6;
+            color: #1F2937;
+        }
+
+        .typing-indicator {
+            background-color: #F3F4F6;
+            color: #6B7280;
+            font-style: italic;
+        }
+
+        #chat-container {
+            position: fixed;
+            bottom: 20px;
+            right: 32px;
+            width: 384px;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.2s ease;
+            visibility: hidden;
+            z-index: 1000;
+        }
+
+        #chat-container.visible {
+            opacity: 1;
+            transform: scale(1);
+            visibility: visible;
+        }
+
+        .message {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background-color: #4F46E5;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.ai {
+            background-color: #F3F4F6;
+            color: #1F2937;
+        }
+
+        .recording-pulse {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(79, 70, 229, 0.2);
+            animation: pulse 1.5s infinite;
+        }
+
+        .recording-active {
+            color: #4f46e5;
+            background-color: #eef2ff;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.95);
+                opacity: 0.9;
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(1.3);
+                opacity: 0;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0.95);
+                opacity: 0;
+            }
+        }
+
+        .typing-indicator {
+            background-color: #F3F4F6;
+            color: #6B7280;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            max-width: 80%;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 4px;
+            height: 4px;
+            background-color: #6B7280;
+            border-radius: 50%;
+            animation: typing 1s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0.1s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function initScrollHints() {
+                const filterSections = document.querySelectorAll('.filter-section');
+                
+                filterSections.forEach(section => {
+                    const content = section.querySelector('.overflow-y-auto');
+                    const scrollHint = document.createElement('div');
+                    scrollHint.className = 'scroll-hint';
+                    scrollHint.innerHTML = '<span class="scroll-text">Scroll for more</span>';
+                    section.querySelector('.scrollable-filter-content').appendChild(scrollHint);
+                    
+                    function checkScroll() {
+                        const hasOverflow = content.scrollHeight > content.clientHeight;
+                        const isAtBottom = content.scrollHeight - content.scrollTop <= content.clientHeight + 20;
+                        section.classList.toggle('can-scroll', hasOverflow);
+                        section.classList.toggle('at-bottom', isAtBottom);
+                    }
+                    
+                    // Show immediately after filters panel is shown
+                    checkScroll();
+                    
+                    content.addEventListener('scroll', checkScroll);
+                    window.addEventListener('resize', checkScroll);
+                    
+                    // Check again after a brief delay to ensure content is rendered
+                    setTimeout(checkScroll, 100);
+                });
+            }
+
+            // Initialize scroll hints when filters are toggled
+            const originalToggleFilters = window.toggleFilters;
+            window.toggleFilters = function() {
+                originalToggleFilters();
+                setTimeout(initScrollHints, 0);
+            };
+
+            // Initial setup
+            initScrollHints();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... existing initialization code ...
+
+            // Update chat toggle function
+            const chatContainer = document.getElementById('chat-container');
+            const chatbotIcon = document.getElementById('chatbotIcon');
+            const closeChat = document.querySelector('.close-chat');
+
+            chatbotIcon.addEventListener('click', function() {
+                chatContainer.classList.add('show');
+                document.getElementById('chat-input').focus();
+            });
+
+            closeChat.addEventListener('click', function() {
+                chatContainer.classList.remove('show');
+            });
+
+            // Add voice input handler
+            const voiceChatBtn = document.getElementById('chat-voice-btn');
+            let isRecording = false;
+
+            voiceChatBtn.addEventListener('click', function() {
+                if ('webkitSpeechRecognition' in window) {
+                    const recognition = new webkitSpeechRecognition();
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.lang = 'en-US';
+
+                    if (!isRecording) {
+                        recognition.start();
+                        isRecording = true;
+                        voiceChatBtn.innerHTML = '<i class="fas fa-microphone text-red-500 animate-pulse"></i>';
+                        voiceChatBtn.classList.add('bg-indigo-50');
+                    } else {
+                        recognition.stop();
+                        isRecording = false;
+                        voiceChatBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                        voiceChatBtn.classList.remove('bg-indigo-50');
+                    }
+
+                    recognition.onresult = function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        document.getElementById('chat-input').value = transcript;
+                        isRecording = false;
+                        voiceChatBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                        voiceChatBtn.classList.remove('bg-indigo-50');
+                        sendMessage(); // Automatically send the message
+                    };
+
+                    recognition.onerror = function() {
+                        isRecording = false;
+                        voiceChatBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                        voiceChatBtn.classList.remove('bg-indigo-50');
+                    };
+
+                    recognition.onend = function() {
+                        isRecording = false;
+                        voiceChatBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                        voiceChatBtn.classList.remove('bg-indigo-50');
+                    };
+                } else {
+                    alert('Speech recognition is not supported in your browser. Please use Chrome.');
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatContainer = document.getElementById('chat-container');
+            const chatbotIcon = document.getElementById('chatbotIcon');
+            const closeChat = document.getElementById('close-chat');
+            
+            // Toggle chat
+            function toggleChat() {
+                chatContainer.classList.toggle('visible');
+                if (chatContainer.classList.contains('visible')) {
+                    document.getElementById('chat-input').focus();
+                }
+            }
+            
+            chatbotIcon.addEventListener('click', toggleChat);
+            closeChat.addEventListener('click', toggleChat);
+            
+            // Start chat button now links directly to chat interface page
+        });
+    </script>
+</head>
+<body class="bg-home">
+
+    {% include 'WhosWhoApp/nav.html' %}
+
+    <!-- AI Finder -->
+    <section class="ai-finder mt-8 relative bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-lg shadow-lg overflow-hidden glow-container">
+        <div class="relative z-10 text-center">
+            <h2 class="text-2xl font-bold text-white mb-3">AI Staff Finder</h2>
+            <p class="text-base text-indigo-100 mb-4">Need help finding the right staff member?</p>
+            <div class="flex justify-center">
+                <a href="{% url 'chat_interface' %}" class="chat-button py-2 px-4 bg-white text-indigo-600 text-sm font-semibold rounded-md shadow-md hover:bg-indigo-50 hover:text-indigo-800 transition-all duration-200 flex items-center gap-2">
+                    <i class="fas fa-robot text-base"></i> Start Chat
+                </a>
+            </div>
+        </div>
+    </section>
+
+
+    <div class="mt-12"></div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6 container mx-auto px-4">
+        <!-- Total Staff -->
+        <div class="stat-card flex items-center gap-3 bg-gradient-to-r from-blue-500 to-indigo-600 p-4 rounded-lg shadow-md text-white">
+            <i class="fas fa-users text-2xl"></i>
+            <div class="stat-info">
+                <div class="text-xs">Total Staff</div>
+                <div class="text-lg font-semibold">{{ total_staff }}</div>
+            </div>
+        </div>
+        
+        <!-- Available Staff -->
+        <div class="stat-card flex items-center gap-3 bg-gradient-to-r from-green-500 to-green-600 p-4 rounded-lg shadow-md text-white">
+            <i class="fas fa-check-circle text-2xl"></i>
+            <div class="stat-info">
+                <div class="text-xs">Available Staff</div>
+                <div class="text-lg font-semibold">{{ available_staff }}</div>
+            </div>
+        </div>
+        
+        <!-- Departments -->
+        <div class="stat-card flex items-center gap-3 bg-gradient-to-r from-yellow-500 to-yellow-700 p-4 rounded-lg shadow-md text-white">
+            <i class="fas fa-building text-2xl"></i>
+            <div class="stat-info">
+                <div class="text-xs">Departments</div>
+                <div class="text-lg font-semibold">{{ departments_count }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="search-filter-section">
+        <form method="GET" id="searchForm" class="space-y-4">
+            <!-- Search Bar First -->
+            <div class="flex items-center gap-3">
+                <div class="search-wrapper flex-1 relative">
+                    <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <input type="text" 
+                           name="search" 
+                           placeholder="Search by name, role, or department..." 
+                           value="{{ search_query }}"
+                           class="search-input">
+                    <button type="button" 
+                            id="voiceSearchBtn"
+                            class="absolute right-12 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                            title="Search by voice">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    {% if search_query %}
+                    <button type="button" 
+                            onclick="window.location.href='?{% if current_letter %}letter={{ current_letter }}{% endif %}'"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" 
+                        class="search-button px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 shadow-md hover:shadow-lg flex items-center gap-2 min-w-[120px] justify-center">
+                    <i class="fas fa-search"></i>
+                    <span>Search</span>
+                </button>
+            </div>
+
+            <!-- Advanced Filters Panel -->
+            <div id="advancedFilters" class="hidden bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Department Filter -->
+                <div class="custom-dropdown" id="departmentDropdown">
+                    <button type="button" class="dropdown-trigger">
+                        <span>Select Departments</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <div class="dropdown-search">
+                            <input type="text" placeholder="Search departments..." onkeyup="filterOptions(this, 'departmentList')">
+                        </div>
+                        <div class="checkbox-list" id="departmentList">
+                            {% for dept in departments %}
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="department[]" value="{{ dept.id }}"
+                                       {% if dept.id|stringformat:"s" in selected_departments %}checked{% endif %}>
+                                {{ dept.name }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role Filter -->
+                <div class="custom-dropdown" id="roleDropdown">
+                    <button type="button" class="dropdown-trigger">
+                        <span>Select Roles</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <div class="dropdown-search">
+                            <input type="text" placeholder="Search roles..." onkeyup="filterOptions(this, 'roleList')">
+                        </div>
+                        <div class="checkbox-list" id="roleList">
+                            {% for role in roles %}
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="role[]" value="{{ role }}"
+                                       {% if role in selected_roles %}checked{% endif %}>
+                                {{ role }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skills Filter -->
+                <div class="custom-dropdown" id="skillsDropdown">
+                    <button type="button" class="dropdown-trigger">
+                        <span>Select Skills</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <div class="dropdown-search">
+                            <input type="text" placeholder="Search skills..." onkeyup="filterOptions(this, 'skillsList')">
+                        </div>
+                        <div class="checkbox-list" id="skillsList">
+                            {% for skill in all_skills %}
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="skills[]" value="{{ skill }}"
+                                       {% if skill in selected_skills %}checked{% endif %}>
+                                {{ skill }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="custom-dropdown" id="statusDropdown">
+                    <button type="button" class="dropdown-trigger">
+                        <span>Select Status</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <div class="checkbox-list" id="statusList">
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="status[]" value="available"
+                                       {% if 'available' in selected_status %}checked{% endif %}>
+                                Available
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="status[]" value="unavailable"
+                                       {% if 'unavailable' in selected_status %}checked{% endif %}>
+                                Unavailable
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end">
+                <button type="submit" class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+                    Apply Filters
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Alphabet and Filter Controls -->
+        <div class="flex items-center gap-3">
+            <div class="flex-shrink-1">
+                <div class="alphabet-nav">
+                    <a href="?" 
+                       class="alphabet-link font-medium border {% if not current_letter %}active{% endif %}">
+                        All
+                    </a>
+                    {% with 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' as alphabet %}
+                    {% for letter in alphabet %}
+                        <a href="?letter={{ letter }}" 
+                           class="alphabet-link font-medium border {% if letter == current_letter %}active{% endif %}">
+                            {{ letter }}
+                        </a>
+                    {% endfor %}
+                    {% endwith %}
+                </div>
+            </div>
+            
+            <!-- Filter and Clear Buttons -->
+            <div class="filter-buttons-wrapper">
+                <div class="flex items-center gap-2 filter-buttons-container">
+                    <button type="button" 
+                            onclick="toggleFilters()"
+                            class="filter-button px-6 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 shadow-md hover:shadow-lg flex items-center gap-2 min-w-[120px] justify-center flex-shrink-0">
+                        <i class="fas fa-filter"></i>
+                        <span>Filters</span>
+                    </button>
+
+                    <a href="?" 
+                       class="clear-button px-6 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 shadow-md hover:shadow-lg flex items-center gap-2 min-w-[120px] justify-center flex-shrink-0">
+                        <i class="fas fa-times"></i>
+                        <span>Clear All</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+    <script>
+    function toggleFilters() {
+        const filters = document.getElementById('advancedFilters');
+        filters.classList.toggle('hidden');
+    }
+
+    function filterOptions(input, listId) {
+        const filter = input.value.toLowerCase();
+        const list = document.getElementById(listId);
+        const items = list.getElementsByClassName('checkbox-item');
+
+        for (let item of items) {
+            const text = item.textContent || item.innerText;
+            if (text.toLowerCase().indexOf(filter) > -1) {
+                item.style.display = "";
+            } else {
+                item.style.display = "none";
+            }
+        }
+    }
+
+    function updateDropdownTriggerText(dropdownId) {
+        const dropdown = document.getElementById(dropdownId);
+        const trigger = dropdown.querySelector('.dropdown-trigger span');
+        const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]:checked');
+        const baseText = trigger.getAttribute('data-base-text') || trigger.textContent;
+        
+        if (checkboxes.length > 0) {
+            const selectedTexts = Array.from(checkboxes).map(cb => cb.parentElement.textContent.trim());
+            const displayText = selectedTexts.length > 2 
+                ? `${selectedTexts.slice(0, 2).join(', ')}...` 
+                : selectedTexts.join(', ');
+                
+            trigger.innerHTML = `
+                ${baseText} <span class="selected-count">${checkboxes.length}</span>
+                <span class="selected-text" title="${selectedTexts.join(', ')}">${displayText}</span>
+            `;
+        } else {
+            trigger.textContent = baseText;
+        }
+    }
+
+    function handleCheckboxChange(dropdownId) {
+        updateDropdownTriggerText(dropdownId);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
+            const trigger = dropdown.querySelector('.dropdown-trigger');
+            const triggerText = trigger.querySelector('span');
+            const content = dropdown.querySelector('.dropdown-content');
+            const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+            
+           
+            triggerText.setAttribute('data-base-text', triggerText.textContent.trim());
+            
+            trigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Toggle  dropdown
+                content.classList.toggle('show');
+                
+                // Closin the other dropdowns
+                document.querySelectorAll('.dropdown-content').forEach(otherContent => {
+                    if (otherContent !== content) {
+                        otherContent.classList.remove('show');
+                    }
+                });
+            });
+
+
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    updateDropdownTriggerText(dropdown.id);
+                });
+            });
+
+        
+            updateDropdownTriggerText(dropdown.id);
+        });
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-dropdown')) {
+                document.querySelectorAll('.dropdown-content').forEach(content => {
+                    content.classList.remove('show');
+                });
+            }
+        });
+
+        const filterSections = document.querySelectorAll('.filter-section');
+        
+        filterSections.forEach(section => {
+            const content = section.querySelector('.overflow-y-auto');
+            
+       
+            const existingHints = section.querySelectorAll('.scroll-hint');
+            existingHints.forEach(hint => hint.remove());
+            
+           
+            const scrollHint = document.createElement('div');
+            scrollHint.className = 'scroll-hint';
+            scrollHint.innerHTML = '<span class="scroll-text">Scroll for more</span>';
+            section.querySelector('.scrollable-filter-content').appendChild(scrollHint);
+            
+            function checkScroll() {
+                const hasOverflow = content.scrollHeight > content.clientHeight;
+                const isAtBottom = content.scrollHeight - content.scrollTop <= content.clientHeight + 20;
+                
+                section.classList.toggle('can-scroll', hasOverflow);
+                section.classList.toggle('at-bottom', isAtBottom);
+            }
+            
+           
+            setTimeout(checkScroll, 50);
+            
+   
+            content.addEventListener('scroll', checkScroll);
+            window.addEventListener('resize', checkScroll);
+            new MutationObserver(checkScroll).observe(content, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+        });
+    });
+        
+    function startVoiceSearch() {
+        if ('webkitSpeechRecognition' in window) {
+            const recognition = new webkitSpeechRecognition();
+            const voiceBtn = document.getElementById('voiceSearchBtn');
+            const searchInput = document.querySelector('input[name="search"]');
+            
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                voiceBtn.innerHTML = '<i class="fas fa-microphone text-red-500 animate-pulse"></i>';
+                voiceBtn.classList.add('animate-pulse');
+            };
+
+            recognition.onend = () => {
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                voiceBtn.classList.remove('animate-pulse');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript;
+                document.getElementById('searchForm').submit();
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                voiceBtn.classList.remove('animate-pulse');
+            };
+
+            recognition.start();
+        } else {
+            alert('Speech recognition is not supported in your browser. Please use Chrome.');
+        }
+    }
+
+    document.getElementById('voiceSearchBtn').addEventListener('click', startVoiceSearch);
+    </script>
+
+    <!-- Staff Cards Section -->
+    <section class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% if staff_profiles %}
+                {% for staff in staff_profiles %}
+                    <div class="staff-card">
+                        <a href="{% url 'staff_profile' staff.id %}" class="block">
+                            <!-- Header - Name, Role, and Status -->
+                            <div class="staff-header">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex items-center gap-3">
+                                        <!-- Pfp-->
+                                        <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-indigo-100">
+                                            {% if staff.profile_picture %}
+                                                <img src="{{ staff.profile_picture.url }}" 
+                                                     alt="{{ staff.name }}"
+                                                     class="w-full h-full object-cover">
+                                            {% else %}
+                                                <div class="w-full h-full bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center">
+                                                    <i class="fas fa-user text-indigo-300"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <!-- Name n Role -->
+                                        <div>
+                                            <h3 class="font-semibold text-gray-900">{{ staff.name }}</h3>
+                                            <div class="flex flex-wrap gap-1">
+                                                {% for role in staff.get_roles %}
+                                                    <p class="text-indigo-600 text-sm">{{ role }}</p>
+                                                    {% if not forloop.last %}<span class="text-gray-400 text-sm">&bull;</span>{% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center mt-2">
+                                    <div class="staff-status {% if staff.status == 'available' %}text-green-700{% else %}text-red-700{% endif %}">
+                                        <span class="status-dot {% if staff.status == 'available' %}bg-green-500{% else %}bg-red-500{% endif %}"></span>
+                                        <span class="text-sm">{{ staff.get_display_status }}</span>
+                                    </div>
+                                    <button onclick="toggleBookmark(event, '{{ staff.id }}')" 
+                                            class="bookmark-btn"
+                                            data-staff-id="{{ staff.id }}">
+                                        <i class="fas fa-bookmark {% if staff.id in bookmarked_staff %}text-indigo-600{% else %}text-gray-400{% endif %}"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Main Content -->
+                            <div class="staff-content">
+                                <!-- Info Grid -->
+                                <div class="staff-info-grid">
+                                    <div class="staff-info-item">
+                                        <i class="fas fa-building"></i>
+                                        <span>{{ staff.department }}</span>
+                                    </div>
+                                    {% if staff.location %}
+                                    <div class="staff-info-item">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>{{ staff.location }}</span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="staff-info-item">
+                                        <i class="fas fa-envelope"></i>
+                                        <span>{{ staff.email }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Skills Tags -->
+                                {% if staff.skills %}
+                                <div class="mt-3">
+                                    <span class="text-sm font-medium text-gray-700 block mb-2">Skills:</span>
+                                    <div class="staff-tags">
+                                        {% for skill in staff.skills|split:"," %}
+                                        <span class="staff-tag">
+                                            <i class="fas fa-check-circle mr-1 text-xs"></i>
+                                            {{ skill|strip }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-center text-gray-500">No staff members found.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- my guthuib -->
+    <footer class="bg-gray-100 py-8 mt-12">
+        <div class="container mx-auto px-4 text-center text-gray-600">
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <a href="https://github.com/IUNW04" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-gray-800 transition-colors">
+                    <i class="fab fa-github text-xl"></i>
+                </a>
+                <a href="https://github.com/IUNW04" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-gray-800 transition-colors">
+                    https://github.com/IUNW04
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Make sure the CSRF token is present -->
+    {% csrf_token %}
+
+    <!-- Chat widget -->
+    <div class="chat-widget">
+        <div class="chatbot-icon" onclick="toggleChat()">
+            <i class="fas fa-robot text-2xl"></i>
+        </div>
+        
+        <div id="chat-container">
+            <div class="bg-indigo-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center">
+                <h3 class="font-semibold">AI Staff Finder</h3>
+                <button onclick="toggleChat()" class="text-white hover:text-gray-200">×</button>
+            </div>
+            <div id="chat-messages" class="h-96 overflow-y-auto p-4 space-y-4"></div>
+            <div class="border-t p-4">
+                <div class="flex items-center space-x-2">
+                    <input type="text" 
+                           id="chat-input" 
+                           class="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           placeholder="Ask about staff...">
+                    <button type="button"
+                            id="voice-chat-btn"
+                            class="p-3 text-gray-400 hover:text-indigo-600 transition-all duration-300 rounded-full hover:bg-gray-100 relative group"
+                            title="Use voice input">
+                        <i class="fas fa-microphone text-lg"></i>
+                        <span class="recording-pulse hidden"></span>
+                        <span class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            Voice Search
+                        </span>
+                    </button>
+                    <button onclick="sendMessage()"
+                            class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this just before the closing body tag -->
+    <script>
+        function toggleChat() {
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.classList.toggle('visible');
+            
+            // If chat is visible, initialize the voice button
+            if (chatContainer.classList.contains('visible')) {
+                document.getElementById('chat-input').focus();
+                // Make sure voice button is initialized only once
+                initializeVoiceButton();
+            }
+        }
+        
+        // Initialize voice button functionality
+        function initializeVoiceButton() {
+            const voiceBtn = document.getElementById('voice-chat-btn');
+            
+            // Instead of replacing the button, just add the event listener if it doesn't already have one
+            if (!voiceBtn.hasAttribute('data-listener-attached')) {
+                voiceBtn.setAttribute('data-listener-attached', 'true');
+                
+                voiceBtn.addEventListener('click', function() {
+                    if (!('webkitSpeechRecognition' in window)) {
+                        alert('Speech recognition is not supported in your browser. Please use Chrome.');
+                        return;
+                    }
+
+                    const recognition = new webkitSpeechRecognition();
+                    const chatInput = document.getElementById('chat-input');
+                    
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.lang = 'en-US';
+
+                    recognition.onstart = () => {
+                        updateVoiceButton(true);
+                        chatInput.placeholder = 'Listening...';
+                    };
+
+                    recognition.onend = () => {
+                        updateVoiceButton(false);
+                        chatInput.placeholder = 'Ask about staff...';
+                    };
+
+                    recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        chatInput.value = transcript;
+                        sendMessage();
+                    };
+
+                    recognition.onerror = (event) => {
+                        console.error('Speech recognition error:', event.error);
+                        updateVoiceButton(false);
+                        chatInput.placeholder = 'Ask about staff...';
+                    };
+
+                    recognition.start();
+                });
+            }
+        }
+
+        function sendMessage() {
+            const chatInput = document.getElementById('chat-input');
+            const chatMessages = document.getElementById('chat-messages');
+            const message = chatInput.value.trim();
+            
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            
+            // Clear input
+            chatInput.value = '';
+
+            // Add typing indicator
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'typing-indicator';
+            typingIndicator.innerHTML = `
+                AI is thinking
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            chatMessages.appendChild(typingIndicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // Send to backend
+            fetch('/chat-with-ai/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                if (data.error) {
+                    addMessage('Sorry, something went wrong.', false);
+                } else {
+                    // Check if staff_info_list is available and pass it to addMessage
+                    if (data.staff_info_list && data.staff_info_list.length > 0) {
+                        addMessage(data.response, false, data.staff_info_list);
+                    } else {
+                        addMessage(data.response, false);
+                    }
+                }
+            })
+            .catch(error => {
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                console.error('Error:', error);
+                addMessage('Sorry, something went wrong.', false);
+            });
+        }
+
+        function addMessage(text, isUser, staffInfo = null) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            if (isUser) {
+                messageDiv.textContent = text;
+            } else {
+                messageDiv.innerHTML = text; // Use innerHTML for AI responses
+                
+                // Add View Profile buttons if staff info is provided
+                if (staffInfo) {
+                    // Create a container for the buttons
+                    const buttonsContainer = document.createElement('div');
+                    buttonsContainer.style.display = 'flex';
+                    buttonsContainer.style.flexWrap = 'wrap';
+                    buttonsContainer.style.gap = '10px';
+                    buttonsContainer.style.marginTop = '10px';
+                    
+                    // Handle both single staff object and array of staff objects
+                    const staffList = Array.isArray(staffInfo) ? staffInfo : [staffInfo];
+                    
+                    // Limit to at most 2 staff members (1 primary and 1 alternative)
+                    const limitedStaffList = staffList.slice(0, 2);
+                    
+                    // Create a button for each staff member
+                    limitedStaffList.forEach((staff, index) => {
+                        if (staff && staff.id) {
+                            const viewProfileBtn = document.createElement('a');
+                            viewProfileBtn.href = `/staff/${staff.id}/`;
+                            viewProfileBtn.className = 'view-profile-btn';
+                            viewProfileBtn.style.display = 'inline-block';
+                            viewProfileBtn.style.padding = '8px 16px';
+                            
+                            // First staff member in the list is considered primary (best match)
+                            // This follows the AI's response order without adding interpretation
+                            if (index === 0) {
+                                viewProfileBtn.style.backgroundColor = '#542eff'; // Brighter purple for primary
+                                viewProfileBtn.style.fontSize = '15px';
+                                viewProfileBtn.style.padding = '10px 18px';
+                                viewProfileBtn.style.boxShadow = '0 4px 8px rgba(84, 46, 255, 0.4)';
+                                viewProfileBtn.innerHTML = `<i class="fas fa-user"></i> View ${staff.name}`;
+                            } else {
+                                viewProfileBtn.style.backgroundColor = '#7158ff'; // Lighter purple for alternatives
+                                viewProfileBtn.style.fontSize = '14px';
+                                viewProfileBtn.style.boxShadow = '0 4px 6px rgba(84, 46, 255, 0.3)';
+                                viewProfileBtn.innerHTML = `<i class="fas fa-user"></i> View ${staff.name}`;
+                            }
+                            
+                            viewProfileBtn.style.color = 'white';
+                            viewProfileBtn.style.borderRadius = '6px';
+                            viewProfileBtn.style.textDecoration = 'none';
+                            viewProfileBtn.style.fontWeight = 'bold';
+                            viewProfileBtn.style.transition = 'all 0.2s ease';
+                            viewProfileBtn.onmouseover = function() { this.style.backgroundColor = '#4419d5'; this.style.transform = 'translateY(-2px)'; };
+                            viewProfileBtn.onmouseout = function() { this.style.backgroundColor = staff.primary ? '#542eff' : '#7158ff'; this.style.transform = 'translateY(0)'; };
+                            
+                            buttonsContainer.appendChild(viewProfileBtn);
+                        }
+                    });
+                    
+                    // Add the buttons container to the message
+                    messageDiv.appendChild(buttonsContainer);
+                }
+            }
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Add enter key support
+        document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function updateVoiceButton(isRecording) {
+            const voiceBtn = document.getElementById('voice-chat-btn');
+            const pulseElement = voiceBtn.querySelector('.recording-pulse');
+            const icon = voiceBtn.querySelector('i');
+            
+            if (isRecording) {
+                icon.className = 'fas fa-microphone text-red-500 animate-pulse';
+                voiceBtn.classList.add('recording-active');
+                pulseElement.classList.remove('hidden');
+            } else {
+                icon.className = 'fas fa-microphone text-lg';
+                voiceBtn.classList.remove('recording-active');
+                pulseElement.classList.add('hidden');
+            }
+        }
+    </script>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+    <script>
+function toggleBookmark(event, staffId) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const button = event.currentTarget;
+    const icon = button.querySelector('i');
+    const csrfToken = getCookie('csrftoken');
+    
+    fetch(`/toggle_bookmark/${staffId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Redirect to bookmarks page regardless of whether  adding or removing the bokmark
+        window.location.href = '/bookmarks/';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+</body>
+</html>

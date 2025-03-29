@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Import Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    {% include 'WhosWhoApp/nav.html' %}
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-3xl font-bold mb-8">Bulk Import Staff</h1>
+
+            <!-- Download Template Button -->
+            <div class="mb-8">
+                <a href="{% url 'download_template' %}" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                    Download Excel Template
+                </a>
+            </div>
+
+            <!-- Upload Form -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Upload Excel File</label>
+                        <input type="file" name="excel_file" accept=".xlsx" required
+                               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                        Import Staff
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Display -->
+            {% if messages %}
+            <div class="mt-8">
+                {% for message in messages %}
+                <div class="p-4 mb-4 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Error Records Display -->
+            {% if error_records %}
+            <div class="mt-8">
+                <h2 class="text-xl font-bold mb-4">Import Errors</h2>
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Row</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Error</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for record in error_records %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.row }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ record.name }}</td>
+                                <td class="px-6 py-4 text-sm text-red-600">{{ record.error }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+{% load custom_filters %}
+<html lang="en">
+<head>
+    <meta charset="""UTF-8">
+    <meta name="viewport" content=""width=device-width, initial-scale="1.0">
+
+    <title>Staff Directory Admin</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <style>
+        
+        .gradient-card {
+            background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+        }
+        .stats-card {
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .tab-button {
+            position: relative;
+            transition: all 0.3s;
+            padding: 0.5rem 1rem;
+            color: #6B7280;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-button.active-tab {
+            color: #4F46E5;
+            border-bottom: 2px solid #4F46E5;
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            padding: 1rem;
+        }
+
+        @media (min-width: 1024px) {
+            .analytics-grid {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 1.5rem;
+            }
+        }
+
+
+        
+        .select-wrapper {
+            position: relative;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .choices__inner {
+            background-color: white;
+            border-radius: 0.375rem;
+            border-color: #E5E7EB;
+            min-height: 38px;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .choices__input {
+            background-color: transparent;
+            margin-bottom: 0;
+        }
+
+        .choices__list--dropdown {
+            z-index: 50;
+            border-radius: 0.375rem;
+            border-color: #E5E7EB;
+        }
+
+        @media (max-width: 640px) {
+            .choices-select {
+                min-width: 120px;
+            }
+            
+            .select-wrapper {
+                min-width: 160px;
+            }
+        }
+
+        .choices__list--multiple .choices__item {
+            background-color: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.2);
+            color: #4F46E5;
+            margin: 2px;
+            padding: 2px 8px;
+        }
+
+        .choices__list--multiple .choices__item.is-highlighted {
+            background-color: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .choices {
+            margin-bottom: 0;
+        }
+
+        .choices__inner {
+            min-height: 38px;
+            padding: 4px 8px;
+        }
+
+        .choices__list--single {
+            padding: 2px 16px 2px 4px;
+        }
+
+        .choices__list--dropdown .choices__item--selectable {
+            padding: 6px 10px;
+        }
+
+        .choices__list--dropdown .choices__item--selectable.is-highlighted {
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        .choices[data-type*='select-one'] .choices__inner {
+            padding-bottom: 4px;
+        }
+
+        .choices[data-type*='select-multiple'] .choices__inner {
+            padding: 4px 8px;
+        }
+
+        .choices__list--dropdown {
+            margin-top: 2px;
+        }
+
+        .choices-select {
+            min-width: 150px;
+        }
+
+        .choices__list--dropdown .choices__list {
+            max-height: 300px;
+        }
+
+        .choices__input--cloned {
+            font-size: 14px;
+        }
+
+        .clear-button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            color: #6B7280;
+            background-color: #F3F4F6;
+            border-radius: 0.375rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .clear-button:hover {
+            background-color: #E5E7EB;
+            color: #4B5563;
+        }
+
+        .dropdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .choices__inner {
+            font-size: 14px;
+            background-color: white;
+        }
+
+        .choices.is-focused .choices__inner {
+            border-color: #6366F1;
+            box-shadow: 0 0 0 1px #6366F1;
+        }
+
+        @media (max-width: 768px) {
+            .custom-dropdown {
+                width: 100%;
+            }
+            
+            .dropdown-trigger {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .dropdown-content {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin: 0;
+                border-radius: 1rem 1rem 0 0;
+                max-height: 80vh;
+                border-bottom: none;
+            }
+
+            .dropdown-search {
+                position: sticky;
+                top: 0;
+                background: white;
+                z-index: 1;
+                padding: 1rem;
+                border-bottom: 1px solid #E5E7EB;
+            }
+
+            .checkbox-list {
+                padding: 0.5rem 1rem;
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            .checkbox-item {
+                padding: 0.5rem 0.75rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border-radius: 0.375rem;
+                margin: 0.125rem 0;
+            }
+
+            .checkbox-item:hover {
+                background-color: rgba(99, 102, 241, 0.05);
+            }
+
+            .checkbox-item input[type="checkbox"] {
+                appearance: none;
+                -webkit-appearance: none;
+                width: 1.125rem;
+                height: 1.125rem;
+                border: 2px solid #E5E7EB;
+                border-radius: 0.25rem;
+                cursor: pointer;
+                position: relative;
+                transition: all 0.2s ease;
+            }
+
+            .checkbox-item input[type="checkbox"]:checked {
+                background-color: #4F46E5;
+                border-color: #4F46E5;
+            }
+
+            .checkbox-item input[type="checkbox"]:checked::after {
+                content: '';
+                position: absolute;
+                left: 4px;
+                top: 1px;
+                width: 5px;
+                height: 10px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+
+            .checkbox-item input[type="checkbox"]:focus {
+                outline: 2px solid rgba(99, 102, 241, 0.5);
+                outline-offset: 2px;
+            }
+
+            .checkbox-item:has(input[type="checkbox"]:checked) {
+                background-color: rgba(99, 102, 241, 0.1);
+            }
+
+            .selected-text {
+                max-width: 150px;
+            }
+        }
+
+        .selected-text {
+            margin-left: 0.5rem;
+            font-size: 0.875rem;
+            color: #4B5563;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chart-filters {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .limit-select {
+            min-width: 100px;
+            padding: 0.5rem;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.375rem;
+            background-color: white;
+            cursor: pointer;
+            height: 38px; 
+        }
+
+        .limit-select:hover {
+            border-color: #4F46E5;
+        }
+
+        .limit-select:focus {
+            outline: none;
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 1px #4F46E5;
+        }
+        
+        .select-info {
+            position: absolute;
+            top: -20px;
+            right: 0;
+            font-size: 0.75rem;
+            color: #6B7280;
+            white-space: nowrap;
+        }
+
+        .custom-dropdown {
+            position: relative;
+            min-width: 200px;
+        }
+
+        .dropdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .dropdown-trigger {
+            flex: 1;
+            text-align: left;
+            padding: 0.5rem;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.375rem;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dropdown-trigger span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .selected-count {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: #4F46E5;
+            padding: 0.125rem 0.375rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+        }
+
+        .clear-button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            color: #6B7280;
+            background-color: #F3F4F6;
+            border-radius: 0.375rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #E5E7EB;
+        }
+
+        .clear-button:hover {
+            background-color: #E5E7EB;
+            color: #4B5563;
+        }
+
+        .custom-dropdown {
+            position: relative;
+            min-width: 200px;
+            margin-bottom: 0.5rem;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.375rem;
+            margin-top: 0.25rem;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 50;
+            display: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .dropdown-content.show {
+            display: block;
+        }
+
+        .dropdown-search {
+            padding: 0.5rem;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .dropdown-search input {
+            width: 100%;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.25rem;
+        }
+
+        .checkbox-list {
+            padding: 0.5rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 0.375rem;
+            cursor: pointer;
+        }
+
+        .checkbox-item:hover {
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+
+    .custom-table-container {
+        max-width: 110rem !important;
+        width: 95% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .custom-table {
+        min-width: 1000px !important;
+        width: 100% !important;
+    }
+</style>
+    <title>Staff Directory Admin</title>
+</head>
+<body class="bg-gray-50 font-sans">
+    {% include 'WhosWhoApp/nav.html' %}
+
+   <!-- Header with teh tabs-->
+<div class="bg-gradient-to-r from-indigo-50 to-blue-50 py-6">
+    <div class="container mx-auto px-4">
+        <div class="border-b border-gray-200">
+            <nav class="flex space-x-8 overflow-x-auto" aria-label="Tabs">
+                <button onclick="switchTab('staff')" 
+                        class="tab-button border-b-2 py-4 px-1 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:text-indigo-700" 
+                        id="staff-tab">
+                    Staff Members
+                </button>
+                <button onclick="switchTab('departments')" 
+                        class="tab-button border-b-2 py-4 px-1 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:text-indigo-700" 
+                        id="departments-tab">
+                    Departments
+                </button>
+                <button onclick="switchTab('users')" 
+                        class="tab-button border-b-2 py-4 px-1 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:text-indigo-700" 
+                        id="users-tab">
+                    Users
+                </button>
+                <button onclick="switchTab('analytics')" 
+                        class="tab-button border-b-2 py-4 px-1 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:text-indigo-700" 
+                        id="analytics-tab">
+                    Analytics
+                </button>
+            </nav>
+        </div>
+    </div>
+</div>
+
+    <!-- Staff Content -->
+    <div id="staff-content" class="tab-content">
+        {% if messages %}
+            {% for message in messages %}
+                {% if '[staff]' in message.message %}
+                    <div class="max-w-7xl mx-auto mt-4">
+                        <div class="{% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-4 rounded-md">
+                            {{ message.message|cut:'[staff]'|strip }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+        <!-- Search and Filters -->
+        <div class="bg-white rounded-lg shadow-lg mb-8 border border-gray-200 mt-6 custom-table-container mx-auto">
+            <div class="p-4">
+                <form method="GET" action="{% url 'admin_dashboard' %}" class="flex flex-col md:flex-row gap-4" onsubmit="return handleFormSubmit(this)">
+                    <input type="hidden" name="active_tab" value="staff">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <input type="text" 
+                                   name="staff_search"
+                                   placeholder="Search staff..."
+                                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                                   value="{{ staff_search|default:'' }}">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="custom-dropdown" id="statusDropdown">
+                        <button type="button" class="dropdown-trigger">
+                            <span>Select Status</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-content">
+                            <div class="dropdown-search">
+                                <input type="text" placeholder="Search status..." onkeyup="filterOptions(this, 'statusList')">
+                            </div>
+                            <div class="checkbox-list" id="statusList">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" name="status" value="available" {% if status_filter == 'available' %}checked{% endif %}>
+                                    Available
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" name="status" value="unavailable" {% if status_filter == 'unavailable' %}checked{% endif %}>
+                                    Unavailable
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" 
+                                class="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                            <i class="fas fa-search mr-2"></i>Search
+                        </button>
+                        <a href="{% url 'staff_add' %}" 
+                           class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center">
+                            <i class="fas fa-plus mr-2"></i>Add Staff
+                        </a>
+                        <a href="{% url 'bulk_staff_import' %}" 
+                           class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center">
+                            <i class="fas fa-upload mr-2"></i>Bulk Import Staff
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Staff Table -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden custom-table-container overflow-x-auto mx-auto" style="max-width: 65rem;">
+            <table class="w-full divide-y divide-gray-200 custom-table" style="min-width: 1000px;">
+                <thead class="bg-gradient-to-r from-indigo-600 to-blue-600">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Staff Names</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Role/s</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Department</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Contact Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for staff in staff_profiles %}
+                    <tr class="{% cycle 'bg-white' 'bg-indigo-50' %} hover:bg-indigo-100 transition-colors duration-150">
+                        <td class="px-6 py-4 whitespace-nowrap pl-8">
+                            <div class="flex items-center">
+                                {% if staff.profile_picture %}
+                                    <img class="h-10 w-10 rounded-full object-cover" src="{{ staff.profile_picture.url }}" alt="{{ staff.name }}">
+                                {% else %}
+                                    <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                        <i class="fas fa-user text-gray-400"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">{{ staff.name }}</div>
+                                    <div class="text-sm text-gray-500">{{ staff.location }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 max-w-[200px]">{{ staff.role }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ staff.department }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ staff.email }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if staff.status == 'available' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ staff.status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="{% url 'staff_edit' staff.id %}" class="text-indigo-600 hover:text-indigo-900 mr-4">
+                                <i class="fas fa-edit text-lg"></i>
+                            </a>
+                            <a href="{% url 'staff_delete' staff.id %}" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash text-lg"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Departments Content -->
+    <div id="departments-content" class="tab-content hidden">
+        {% if dept_message %}
+            <div class="max-w-[75rem] mx-auto mt-4">
+                <div class="{% if dept_message.type == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-4 rounded-md">
+                    {{ dept_message.text }}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Department Search and Add -->
+        <div class="bg-white rounded-lg shadow-lg mb-8 border border-gray-200 mt-6 custom-table-container mx-auto">
+            <div class="p-4">
+                <form method="GET" action="{% url 'admin_dashboard' %}" class="flex flex-col md:flex-row gap-4">
+                    <input type="hidden" name="active_tab" value="departments">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <input type="text" 
+                                   name="dept_search"
+                                   placeholder="Search departments..."
+                                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                                   value="{{ dept_search|default:'' }}">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" 
+                                class="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                            <i class="fas fa-search mr-2"></i>Search
+                        </button>
+                        <a href="{% url 'add_department' %}" 
+                           class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center">
+                            <i class="fas fa-plus mr-2"></i>Add Department
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Department List -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden custom-table-container overflow-x-auto mx-auto">
+            <table class="w-full min-w-[1200px] divide-y divide-gray-200">
+                <thead class="bg-gradient-to-r from-indigo-600 to-blue-600">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Department Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Staff Count</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for dept in departments %}
+                    <tr class="{% cycle 'bg-white' 'bg-indigo-50' %} hover:bg-indigo-100 transition-colors duration-150">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ dept.name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ dept.staffprofile_set.count }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="{% url 'edit_department' dept.id %}" class="text-indigo-600 hover:text-indigo-900 mr-4">
+                                <i class="fas fa-edit text-lg"></i>
+                            </a>
+                            <form method="POST" action="{% url 'delete_department' dept.id %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash text-lg"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Users Content -->
+<div id="users-content" class="tab-content hidden">
+    {% if messages %}
+        {% for message in messages %}
+            {% if '[user]' in message.message %}
+                <div class="max-w-[75rem] mx-auto mt-4">
+                    <div class="{% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-4 rounded-md">
+                        {{ message.message|cut:'[user]'|strip }}
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <!-- Search and Filter Section -->
+    <div class="bg-white rounded-lg shadow-lg mb-8 border border-gray-200 mt-6 custom-table-container mx-auto">
+        <div class="p-4">
+            <form method="GET" action="{% url 'admin_dashboard' %}" class="flex flex-col md:flex-row gap-4" onsubmit="return handleFormSubmit(this)">
+                <input type="hidden" name="active_tab" value="users">
+                <div class="flex-1">
+                    <div class="relative">
+                        <input type="text" 
+                               name="user_search" 
+                               placeholder="Search users..." 
+                               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                               value="{{ user_search }}">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="custom-dropdown" id="roleDropdown">
+                    <button type="button" class="dropdown-trigger">
+                        <span>Select Role</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <div class="dropdown-search">
+                            <input type="text" placeholder="Search roles..." onkeyup="filterOptions(this, 'roleList')">
+                        </div>
+                        <div class="checkbox-list" id="roleList">
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="role_filter" value="admin" {% if role_filter == 'admin' %}checked{% endif %}>
+                                Admin
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="role_filter" value="user" {% if role_filter == 'user' %}checked{% endif %}>
+                                User
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" 
+                            class="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                        <i class="fas fa-search mr-2"></i>Search
+                    </button>
+                    <a href="{% url 'add_user' %}" 
+                       class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Add User
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden custom-table-container overflow-x-auto mx-auto">
+        <table class="w-full min-w-[1200px] divide-y divide-gray-200">
+            <thead class="bg-gradient-to-r from-indigo-600 to-blue-600">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Username</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Email Linked to Account</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Account Role</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for user in users %}
+                <tr class="{% cycle 'bg-white' 'bg-indigo-50' %} hover:bg-indigo-100 transition-colors duration-150">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.username }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.email }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded-full {% if user.is_superuser %}bg-purple-100 text-purple-800{% elif user|has_staff_profile %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {% if user.is_superuser %}
+                                Admin
+                            {% elif user|has_staff_profile %}
+                                Staff
+                            {% else %}
+                                Regular User
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'edit_user' user.id %}" class="text-indigo-600 hover:text-indigo-900 mr-4">
+                            <i class="fas fa-edit text-lg"></i>
+                        </a>
+                        <form method="POST" action="{% url 'delete_user' user.id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash text-lg"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Analytics Content -->
+<div id="analytics-content" class="tab-content hidden">
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
+        <div class="analytics-grid">
+            <!-- Staff Distribution Chart -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Staff Distribution by Department</h3>
+                    <div class="chart-filters">
+                        <select id="departmentLimit" class="limit-select" onchange="updateDepartmentChart()">
+                            <option value="all">Show All</option>
+                            <option value="5" selected>Top 5</option>
+                            <option value="10">Top 10</option>
+                        </select>
+                        <div class="custom-dropdown" id="departmentDropdown">
+                            <div class="dropdown-header">
+                                <button type="button" class="dropdown-trigger">
+                                    <span>Select Departments</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="clear-button" onclick="clearDropdown('departmentDropdown', updateDepartmentChart)">
+                                    Clear
+                                </button>
+                            </div>
+                            <div class="dropdown-content">
+                                <div class="dropdown-search">
+                                    <input type="text" placeholder="Search departments..." onkeyup="filterOptions(this, 'departmentList')">
+                                </div>
+                                <div class="checkbox-list" id="departmentList">
+                                    {% for dept in departments %}
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" value="{{ dept.id }}" onchange="handleCheckboxChange('departmentDropdown', updateDepartmentChart)">
+                                        {{ dept.name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="staffDistributionChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Profile Views Chart -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Most Visited Staff Profiles (Unique Views)</h3>
+                    <div class="chart-filters">
+                        <select id="profileViewsLimit" class="limit-select" onchange="updateProfileViewsChart()">
+                            <option value="all">Show All</option>
+                            <option value="5" selected>Top 5</option>
+                            <option value="10">Top 10</option>
+                        </select>
+                        <div class="custom-dropdown" id="staffDropdown">
+                            <div class="dropdown-header">
+                                <button type="button" class="dropdown-trigger">
+                                    <span>Select Staff Members</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="clear-button" onclick="clearDropdown('staffDropdown', updateProfileViewsChart)">
+                                    Clear
+                                </button>
+                            </div>
+                            <div class="dropdown-content">
+                                <div class="dropdown-search">
+                                    <input type="text" placeholder="Search staff..." onkeyup="filterOptions(this, 'staffList')">
+                                </div>
+                                <div class="checkbox-list" id="staffList">
+                                    {% for staff in staff_profiles %}
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" value="{{ staff.id }}" onchange="handleCheckboxChange('staffDropdown', updateProfileViewsChart)">
+                                        {{ staff.name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="profileViewsChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Staff Status Distribution -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Staff Status Distribution</h3>
+                    <div class="custom-dropdown" id="statusFilterDropdown">
+                        <div class="dropdown-header">
+                            <button type="button" class="dropdown-trigger">
+                                <span>Select Department</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <button type="button" class="clear-button" onclick="clearDropdown('statusFilterDropdown', updateStatusChart)">
+                                Clear
+                            </button>
+                        </div>
+
+                        <div class="dropdown-content">
+                            <div class="dropdown-search">
+                                <input type="text" placeholder="Search departments..." onkeyup="filterOptions(this, 'statusFilterList')">
+                            </div>
+                            <div class="checkbox-list" id="statusFilterList">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="" 
+                                           onchange="handleSingleSelection('statusFilterList', this); handleCheckboxChange('statusFilterDropdown', updateStatusChart)">
+                                    All Departments
+                                </label>
+                                {% for dept in departments %}
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="{{ dept.id }}" 
+                                           onchange="handleSingleSelection('statusFilterList', this); handleCheckboxChange('statusFilterDropdown', updateStatusChart)">
+                                    {{ dept.name }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusDistributionChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Staff Bookmark Chart -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Most Bookmarked Staff Profiles</h3>
+                    <div class="chart-filters">
+                        <select id="bookmarkLimit" class="limit-select" onchange="updateBookmarkChart()">
+                            <option value="all">Show All</option>
+                            <option value="5" selected>Top 5</option>
+                            <option value="10">Top 10</option>
+                        </select>
+                        <div class="custom-dropdown" id="bookmarkStaffDropdown">
+                            <div class="dropdown-header">
+                                <button type="button" class="dropdown-trigger">
+                                    <span>Select Staff Members</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="clear-button" onclick="clearDropdown('bookmarkStaffDropdown', updateBookmarkChart)">
+                                    Clear
+                                </button>
+                            </div>
+                            <div class="dropdown-content">
+                                <div class="dropdown-search">
+                                    <input type="text" placeholder="Search staff..." onkeyup="filterOptions(this, 'bookmarkStaffList')">
+                                </div>
+                                <div class="checkbox-list" id="bookmarkStaffList">
+                                    {% for staff in staff_profiles %}
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" value="{{ staff.id }}" onchange="handleCheckboxChange('bookmarkStaffDropdown', updateBookmarkChart)">
+                                        {{ staff.name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="bookmarkChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Department Growth Trend -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Department Growth Trend</h3>
+                    <div class="custom-dropdown" id="trendDepartmentDropdown">
+                        <div class="dropdown-header">
+                            <button type="button" class="dropdown-trigger">
+                                <span>Select Department</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <button type="button" class="clear-button" onclick="clearDropdown('trendDepartmentDropdown', updateGrowthChart)">
+                                Clear
+                            </button>
+                        </div>
+                        <div class="dropdown-content">
+                            <div class="dropdown-search">
+                                <input type="text" placeholder="Search departments..." onkeyup="filterOptions(this, 'trendDepartmentList')">
+                            </div>
+                            <div class="checkbox-list" id="trendDepartmentList">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="" 
+                                           onchange="handleSingleSelection('trendDepartmentList', this); handleCheckboxChange('trendDepartmentDropdown', updateGrowthChart)">
+                                    All Departments
+                                </label>
+                                {% for dept in departments %}
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="{{ dept.id }}" 
+                                           onchange="handleSingleSelection('trendDepartmentList', this); handleCheckboxChange('trendDepartmentDropdown', updateGrowthChart)">
+                                    {{ dept.name }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="growthTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+let allDepartmentData = JSON.parse('{{ department_names|escapejs }}');
+let allStaffCounts = JSON.parse('{{ staff_counts|escapejs }}');
+let allStaffNames = JSON.parse('{{ staff_names|escapejs }}');
+let allProfileViews = JSON.parse('{{ profile_views|escapejs }}');
+let allBookmarkStaffNames = JSON.parse('{{ bookmark_staff_names|escapejs }}');
+let allBookmarkCounts = JSON.parse('{{ bookmark_counts|escapejs }}');
+let allMonths = JSON.parse('{{ months|escapejs }}');
+let allGrowthData = JSON.parse('{{ growth_data|escapejs }}');
+let departmentData = JSON.parse('{{ department_data|escapejs }}');
+let departments = JSON.parse('{{ departments_json|escapejs }}');
+let staffData = JSON.parse('{{ staff_json|escapejs }}');
+let bookmarkData = JSON.parse('{{ bookmark_json|escapejs }}');
+let departmentChartInstance = null;
+let profileViewsChartInstance = null;
+let bookmarkChartInstance = null;
+let statusChartInstance = null;
+let growthChartInstance = null;
+
+function clearDropdown(dropdownId, updateFn) {
+    const dropdown = document.getElementById(dropdownId);
+    const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    updateDropdownTriggerText(dropdownId);
+    if (updateFn) updateFn();
+}
+
+function limitData(labels, data, limit) {
+    if (!limit || limit === 'all') {
+        return { labels, data };
+    }
+    
+    // this creates array of objects to maintain label-data relationship
+    let combined = labels.map((label, i) => ({ label, value: data[i] }));
+    // Sort by value in decending order
+    combined.sort((a, b) => b.value - a.value);
+    // Takin only the specified number of items
+    const limitNum = parseInt(limit);
+    combined = combined.slice(0, Math.min(limitNum, combined.length));
+    // Splittin back into separate arrays
+    return {
+        labels: combined.map(item => item.label),
+        data: combined.map(item => item.value)
+    };
+}
+
+
+const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {
+        padding: {
+            top: 10,
+            bottom: 10
+        }
+    }
+};
+
+function updateDepartmentChart() {
+    const limit = document.getElementById('departmentLimit').value;
+    const selectedDepts = Array.from(document.querySelectorAll('#departmentList input[type="checkbox"]:checked'))
+        .map(checkbox => parseInt(checkbox.value))
+        .filter(id => !isNaN(id));
+    
+    let filteredLabels = allDepartmentData;
+    let filteredData = allStaffCounts;
+    
+    if (selectedDepts.length > 0) {
+        const selectedDeptNames = departments
+            .filter(d => selectedDepts.includes(d.id))
+            .map(d => d.name);
+        
+        filteredLabels = selectedDeptNames;
+        filteredData = selectedDepts.map(id => {
+            const dept = departments.find(d => d.id === id);
+            return allStaffCounts[allDepartmentData.indexOf(dept.name)] || 0;
+        });
+    }
+    
+    const limitedData = selectedDepts.length > 0 ? 
+        { labels: filteredLabels, data: filteredData } : 
+        limitData(filteredLabels, filteredData, limit);
+
+    
+    if (departmentChartInstance) {
+        departmentChartInstance.destroy();
+    }
+    
+    departmentChartInstance = new Chart(document.getElementById('staffDistributionChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: limitedData.labels,
+            datasets: [{
+                label: 'Number of Staff',
+                data: limitedData.data,
+                backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                borderColor: 'rgb(99, 102, 241)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                title: {
+                    display: true,
+                    text: selectedDepts.length > 0 ? 'Selected Departments Staff Distribution' : 'Staff Distribution by Department'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+
+    });
+}
+
+function updateProfileViewsChart() {
+    const limit = document.getElementById('profileViewsLimit').value;
+    const selectedStaff = Array.from(document.querySelectorAll('#staffList input[type="checkbox"]:checked'))
+        .map(checkbox => parseInt(checkbox.value))
+        .filter(id => !isNaN(id));
+    
+    let filteredLabels = allStaffNames;
+    let filteredData = allProfileViews;
+    
+    if (selectedStaff.length > 0) {
+        const selectedStaffData = staffData
+            .filter(s => selectedStaff.includes(s.id));
+        
+        filteredLabels = selectedStaffData.map(s => s.name);
+        filteredData = selectedStaffData.map(s => s.views);
+    }
+    
+    const limitedData = selectedStaff.length > 0 ? 
+        { labels: filteredLabels, data: filteredData } : 
+        limitData(filteredLabels, filteredData, limit);
+
+    
+    if (profileViewsChartInstance) {
+        profileViewsChartInstance.destroy();
+    }
+    
+    profileViewsChartInstance = new Chart(document.getElementById('profileViewsChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: limitedData.labels,
+            datasets: [{
+                label: 'Unique Profile Views',
+                data: limitedData.data,
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            plugins: {
+                title: {
+                    display: true,
+                    text: selectedStaff.length > 0 ? 'Selected Staff Profile Views' : 'Most Visited Staff Profiles'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.parsed.x} unique visitors`;
+                        }
+                    }
+                }
+            }
+        }
+
+    });
+}
+
+function updateBookmarkChart() {
+    const limit = document.getElementById('bookmarkLimit').value;
+    const selectedStaff = Array.from(document.querySelectorAll('#bookmarkStaffList input[type="checkbox"]:checked'))
+        .map(checkbox => parseInt(checkbox.value))
+        .filter(id => !isNaN(id));
+    
+    let filteredLabels = allBookmarkStaffNames;
+    let filteredData = allBookmarkCounts;
+    
+    if (selectedStaff.length > 0) {
+        const selectedStaffData = bookmarkData
+            .filter(s => selectedStaff.includes(s.id));
+        
+        filteredLabels = selectedStaffData.map(s => s.name);
+        filteredData = selectedStaffData.map(s => s.bookmarks);
+    }
+    
+    const limitedData = selectedStaff.length > 0 ? 
+        { labels: filteredLabels, data: filteredData } : 
+        limitData(filteredLabels, filteredData, limit);
+
+    
+    if (bookmarkChartInstance) {
+        bookmarkChartInstance.destroy();
+    }
+    
+    bookmarkChartInstance = new Chart(document.getElementById('bookmarkChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: limitedData.labels,
+            datasets: [{
+                label: 'Bookmark Count',
+                data: limitedData.data,
+                backgroundColor: 'rgba(139, 92, 246, 0.5)',
+                borderColor: 'rgb(139, 92, 246)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            plugins: {
+                title: {
+                    display: true,
+                    text: selectedStaff.length > 0 ? 'Selected Staff Bookmark Counts' : 'Most Bookmarked Staff Profiles'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.parsed.x} bookmarks`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateStatusChart() {
+    const selectedDepts = Array.from(document.querySelectorAll('#statusFilterList input[type="checkbox"]:checked'))
+        .map(checkbox => checkbox.value)
+        .filter(value => value !== "");
+    
+    let statusData = JSON.parse('{{ status_distribution|escapejs }}');
+    
+    if (selectedDepts.length === 1 && selectedDepts[0] !== "") {
+        statusData = filterStatusByDepartment(statusData, selectedDepts[0]);
+    }
+    
+    if (statusChartInstance) {
+        statusChartInstance.destroy();
+    }
+    
+    statusChartInstance = new Chart(document.getElementById('statusDistributionChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Available', 'Unavailable'],
+            datasets: [{
+                data: statusData,
+                backgroundColor: [
+                    'rgba(34, 197, 94, 0.5)',
+                    'rgba(239, 68, 68, 0.5)'
+                ],
+                borderColor: [
+                    'rgb(34, 197, 94)',
+                    'rgb(239, 68, 68)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                title: {
+                    display: true,
+                    text: selectedDepts.length === 0 || selectedDepts[0] === "" ? 
+                        'Overall Staff Status Distribution' : 
+                        `Staff Status Distribution - ${departments.find(d => d.id.toString() === selectedDepts[0])?.name || 'All Departments'}`
+                }
+            }
+        }
+    });
+}
+
+function updateGrowthChart() {
+    const selectedDepts = Array.from(document.querySelectorAll('#trendDepartmentList input[type="checkbox"]:checked'))
+        .map(checkbox => checkbox.value)
+        .filter(value => value !== "");
+    
+    let growthData = allGrowthData;
+    let months = allMonths;
+    
+    if (selectedDepts.length === 1 && selectedDepts[0] !== "") {
+        growthData = filterGrowthByDepartment(growthData, selectedDepts[0]);
+    }
+    
+    if (growthChartInstance) {
+        growthChartInstance.destroy();
+    }
+    
+    growthChartInstance = new Chart(document.getElementById('growthTrendChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Staff Growth',
+                data: growthData,
+                borderColor: 'rgb(99, 102, 241)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                title: {
+                    display: true,
+                    text: selectedDepts.length === 0 || selectedDepts[0] === "" ? 
+                        'Overall Department Growth Trend' : 
+                        `Growth Trend - ${departments.find(d => d.id.toString() === selectedDepts[0])?.name || 'All Departments'}`
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+
+function filterStatusByDepartment(data, departmentId) {
+    if (!departmentId || !departmentData[departmentId]) {
+        return data;
+    }
+    return departmentData[departmentId].status_distribution;
+}
+
+function filterGrowthByDepartment(data, departmentId) {
+    if (!departmentId || !departmentData[departmentId]) {
+        return data;
+    }
+    return departmentData[departmentId].growth_data;
+}
+
+function switchTab(tab) {
+
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active-tab');
+    });
+    document.getElementById(`${tab}-tab`).classList.add('active-tab');
+
+
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    document.getElementById(`${tab}-content`).classList.remove('hidden');
+
+
+    if (departmentChartInstance) {
+        departmentChartInstance.destroy();
+        departmentChartInstance = null;
+    }
+    if (profileViewsChartInstance) {
+        profileViewsChartInstance.destroy();
+        profileViewsChartInstance = null;
+    }
+    if (statusChartInstance) {
+        statusChartInstance.destroy();
+        statusChartInstance = null;
+    }
+    if (growthChartInstance) {
+        growthChartInstance.destroy();
+        growthChartInstance = null;
+    }
+
+ 
+    if (tab === 'analytics') {
+     
+        requestAnimationFrame(() => {
+            updateDepartmentChart();
+            updateProfileViewsChart();
+            updateStatusChart();
+            updateGrowthChart();
+        });
+    }
+}
+
+
+function initializeChoices() {
+    const choicesConfig = {
+        removeItemButton: true,
+        searchEnabled: true,
+        searchPlaceholderValue: 'Type to search...',
+        placeholder: true,
+        placeholderValue: 'Select...',
+        classNames: {
+            containerOuter: 'choices w-full',
+        },
+        searchResultLimit: 10,
+        renderChoiceLimit: 10,
+        searchFields: ['label', 'value'],
+        fuseOptions: {
+            threshold: 0.3,
+        },
+    };
+
+    const elements = [
+        {
+            id: 'selectedDepartments',
+            config: {
+                ...choicesConfig,
+                searchPlaceholderValue: 'Search departments...',
+                placeholderValue: 'Select departments',
+                maxItemCount: -1,
+            }
+        },
+        {
+            id: 'selectedStaff',
+            config: {
+                ...choicesConfig,
+                searchPlaceholderValue: 'Search staff...',
+                placeholderValue: 'Select staff members',
+                maxItemCount: -1,
+            }
+        },
+        {
+            id: 'departmentFilter',
+            config: {
+                ...choicesConfig,
+                searchPlaceholderValue: 'Search departments...',
+                placeholderValue: 'All Departments',
+                maxItemCount: 1,
+            }
+        },
+        {
+            id: 'trendDepartment',
+            config: {
+                ...choicesConfig,
+                searchPlaceholderValue: 'Search departments...',
+                placeholderValue: 'All Departments',
+                maxItemCount: 1,
+            }
+        },
+        {
+            id: 'departmentLimit',
+            config: {
+                ...choicesConfig,
+                searchEnabled: false,
+                maxItemCount: 1,
+                placeholderValue: 'Select limit'
+            }
+        },
+        {
+            id: 'profileViewsLimit',
+            config: {
+                ...choicesConfig,
+                searchEnabled: false,
+                maxItemCount: 1,
+                placeholderValue: 'Select limit'
+            }
+        },
+        {
+            id: 'statusFilter',
+            config: {
+                ...choicesConfig,
+                searchEnabled: false,
+                maxItemCount: 1,
+                placeholderValue: 'Select status'
+            }
+        }
+    ];
+
+    elements.forEach(({ id, config }) => {
+        const element = document.getElementById(id);
+        if (element) {
+            new Choices(element, config);
+        }
+    });
+}
+
+
+function setupChoicesEventListeners() {
+    const choicesElements = {
+        'selectedDepartments': updateDepartmentChart,
+        'selectedStaff': updateProfileViewsChart,
+        'selectedBookmarkStaff': updateBookmarkChart,
+        'departmentFilter': updateStatusChart,
+        'trendDepartment': updateGrowthChart,
+        'departmentLimit': updateDepartmentChart,
+        'profileViewsLimit': updateProfileViewsChart,
+        'bookmarkLimit': updateBookmarkChart
+    };
+
+    Object.entries(choicesElements).forEach(([id, updateFn]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', updateFn);
+            element.addEventListener('hideDropdown', updateFn);
+        }
+    });
+}
+
+function updateDropdownTriggerText(dropdownId) {
+    const dropdown = document.getElementById(dropdownId);
+    const trigger = dropdown.querySelector('.dropdown-trigger span');
+    const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]:checked');
+    const baseText = trigger.getAttribute('data-base-text') || trigger.textContent;
+    
+    if (checkboxes.length > 0) {
+        const selectedTexts = Array.from(checkboxes).map(cb => cb.parentElement.textContent.trim());
+        const displayText = selectedTexts.length > 2 
+            ? `${selectedTexts.slice(0, 2).join(', ')}...` 
+            : selectedTexts.join(', ');
+            
+        trigger.innerHTML = `
+            ${baseText} <span class="selected-count">${checkboxes.length}</span>
+            <span class="selected-text" title="${selectedTexts.join(', ')}">${displayText}</span>
+        `;
+    } else {
+        trigger.textContent = baseText;
+    }
+}
+
+function handleSingleSelection(listId, checkbox) {
+    const list = document.getElementById(listId);
+    const checkboxes = list.querySelectorAll('input[type="checkbox"]');
+    
+    checkboxes.forEach(cb => {
+        if (cb !== checkbox) {
+            cb.checked = false;
+        }
+    });
+}
+
+function handleCheckboxChange(dropdownId, updateFn) {
+    updateDropdownTriggerText(dropdownId);
+    if (updateFn) updateFn();
+}
+
+function initializeDropdowns() {
+    document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
+        const trigger = dropdown.querySelector('.dropdown-trigger span');
+        trigger.setAttribute('data-base-text', trigger.textContent.trim());
+        
+        const content = dropdown.querySelector('.dropdown-content');
+        const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+        
+        trigger.parentElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            content.classList.toggle('show');
+        });
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateDropdownTriggerText(dropdown.id);
+            });
+        });
+
+      
+        updateDropdownTriggerText(dropdown.id);
+
+        // touch event handling
+        if ('ontouchstart' in window) {
+            dropdown.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            }, { passive: true });
+            
+            document.addEventListener('touchstart', (e) => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.querySelector('.dropdown-content')?.classList.remove('show');
+                }
+            }, { passive: true });
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.custom-dropdown')) {
+            document.querySelectorAll('.dropdown-content').forEach(content => {
+                content.classList.remove('show');
+            });
+        }
+    });
+}
+
+function filterOptions(input, listId) {
+    const filter = input.value.toLowerCase();
+    const list = document.getElementById(listId);
+    const items = list.getElementsByClassName('checkbox-item');
+
+    for (let item of items) {
+        const text = item.textContent || item.innerText;
+        if (text.toLowerCase().indexOf(filter) > -1) {
+            item.style.display = "";
+        } else {
+            item.style.display = "none";
+        }
+    }
+}
+
+function handleFormSubmit(formElement) {
+    const checkboxGroups = formElement.querySelectorAll('.checkbox-list');
+    checkboxGroups.forEach(group => {
+        const checkedBoxes = Array.from(group.querySelectorAll('input[type="checkbox"]:checked'));
+        const firstCheckbox = group.querySelector('input[type="checkbox"]');
+        const filterName = firstCheckbox?.name;
+        
+        if (filterName && checkedBoxes.length === 0) {
+            // hidden input with empty value to reset the filter
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = filterName;
+            hiddenInput.value = '';
+            formElement.appendChild(hiddenInput);
+        }
+        
+        //  multiple selections
+        if (checkedBoxes.length > 1) {
+            checkedBoxes.forEach((cb, index) => {
+                if (index > 0) { // Gotta Skip first one cos it's already in the form
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = cb.name;
+                    hiddenInput.value = cb.value;
+                    formElement.appendChild(hiddenInput);
+                }
+            });
+        }
+    });
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    const initialTab = '{{ active_tab }}';
+    switchTab(initialTab);
+
+    // Initialize all charts
+    updateDepartmentChart();
+    updateProfileViewsChart();
+    updateBookmarkChart();
+    updateStatusChart();
+    updateGrowthChart();
+   
+    initializeDropdowns();
+});
+
+</script>

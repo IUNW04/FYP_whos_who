@@ -1,0 +1,363 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Dashboard - {{ staff_profile.name }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+    .card-modern {
+
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            transition: all 0.3s ease;
+        }
+        .card-modern:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(99, 102, 241, 0.1);
+        }
+        .input-modern {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            transition: all 0.3s ease;
+        }
+        .input-modern:focus {
+            background: white;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        .button-modern {
+            background: linear-gradient(135deg, #4028db 0%, #100f75 100%);
+            transition: all 0.3s ease;
+        }
+        .button-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+        }
+        .status-indicator {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .bg-page {
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 40% 20%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, rgba(146, 26, 44, 0.127) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, rgba(25, 133, 65, 0.15) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, rgba(245, 158, 11, 0.15) 0px, transparent 50%);
+            min-height: 100vh;
+            position: relative;
+        }
+
+.profile-header {
+
+            background: linear-gradient(135deg, #0707a7 0%, #373bf8 50%, #292ce9 0%);
+            
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 20px 25px -5px rgba(0, 0, 0, 0.1),
+                0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+
+        .card-contact {
+            border-left: 4px solid #ec4899;  
+            box-shadow: -8px 0 20px -5px rgba(236, 72, 153, 0.1);
+        }
+
+
+        .card-hours {
+            border-left: 4px solid #8b5cf6;  
+            box-shadow: -8px 0 20px -5px rgba(139, 92, 246, 0.1);
+        }
+
+
+        .card-bio {
+            border-left: 4px solid #3b82f6;  
+            box-shadow: -8px 0 20px -5px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Additional Info Card */
+        .card-additional {
+            border-left: 4px solid #10b981; 
+            box-shadow: -8px 0 20px -5px rgba(16, 185, 129, 0.1);
+        }
+
+
+        .card-skills {
+            border-left: 4px solid #f59e0b;  
+            box-shadow: -8px 0 20px -5px rgba(245, 158, 11, 0.1);
+        }
+
+
+        #staffDashboardForm {
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-modern {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-page">
+    {% include 'WhosWhoApp/nav.html' %}
+
+    <form method="POST" id="staffDashboardForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="max-w-7xl mx-auto px-6 py-8">
+            <div class="profile-header shadow-xl">
+
+                <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-8">
+                    <div class="relative group">
+
+                        {% if staff_profile.profile_picture %}
+                            <img src="{{ staff_profile.profile_picture.url }}" alt="{{ staff_profile.name }}" 
+                                 class="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg">
+                        {% else %}
+                            <div class="h-32 w-32 rounded-full bg-blue-100 flex items-center justify-center border-4 border-white shadow-lg">
+                                <i class="fas fa-user text-4xl text-blue-400"></i>
+                            </div>
+                        {% endif %}
+                        <label class="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2 cursor-pointer shadow-lg 
+                                    transform transition-transform duration-200 hover:scale-110">
+                            <i class="fas fa-camera text-white text-sm"></i>
+                            <input type="file" name="profile_picture" class="hidden" accept="image/*">
+                        </label>
+                    </div>
+
+                    <div class="flex-grow text-center md:text-left">
+
+                        <h1 class="text-3xl font-bold text-white mb-2">{{ staff_profile.name }}</h1>
+                        <p class="text-blue-100 text-lg mb-4">{{ staff_profile.role }} at Department of {{ staff_profile.department }}</p>
+                        
+                        <div class="flex flex-col md:flex-row gap-4 text-white mb-4">
+
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-bookmark"></i>
+                                <span>
+                                    {% if staff_profile.bookmark_count == 0 %}
+                                        No bookmarks yet
+                                    {% elif staff_profile.bookmark_count == 1 %}
+                                        1 Person has bookmarked you
+                                    {% elif staff_profile.bookmark_count >= 5 %}
+                                        🔥 {{ staff_profile.bookmark_count }} People have bookmarked you
+                                    {% else %}
+                                        {{ staff_profile.bookmark_count }} eople have bookmarked you
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+
+                                <i class="fas fa-eye"></i>
+                                <span>
+                                    {% with unique_views=staff_profile.views.count %}
+                                        {% if unique_views == 0 %}
+                                            No profile views yet
+                                        {% elif unique_views == 1 %}
+                                            1 unique visitor
+                                        {% elif unique_views >= 10 %}
+                                            🔥 {{ unique_views }} unique visitors
+                                        {% else %}
+                                            {{ unique_views }} unique visitors
+                                        {% endif %}
+                                    {% endwith %}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col md:flex-row items-center space-y-3 md:space-y-0 md:space-x-4">
+
+                            <input type="hidden" name="current_status" value="{{ staff_profile.status }}">
+                            <button type="button" onclick="toggleStatus()" 
+                                    class="status-indicator inline-flex items-center
+                                    {% if staff_profile.status == 'available' %}
+                                        bg-green-100 text-green-700 hover:bg-green-200
+                                    {% else %}
+                                        bg-red-100 text-red-700 hover:bg-red-200
+                                    {% endif %}">
+                                <span class="w-3 h-3 rounded-full mr-2 
+                                    {% if staff_profile.status == 'available' %}bg-green-500{% else %}bg-red-500{% endif %}">
+                                </span>
+                                {{ staff_profile.status|title }}
+                            </button>
+                            
+                            <input type="text" 
+                                   name="custom_status" 
+                                   value="{{ staff_profile.custom_status }}"
+                                   placeholder="Type Custom Status"
+                                   class="input-modern w-full md:w-auto px-4 py-2 rounded-full text-sm focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                <div class="lg:col-span-1 space-y-8">
+                    <div class="card-modern card-contact rounded-xl p-6">
+
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-address-card mr-3 text-blue-500"></i>
+                            Contact Information
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-500">Email</label>
+                                <p class="text-gray-900">{{ staff_profile.email }}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-500">Location</label>
+                                <p class="text-gray-900">{{ staff_profile.location|default:"Not set" }}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-500">Phone</label>
+                                <p class="text-gray-900">{{ staff_profile.phone|default:"Not set" }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-modern card-hours rounded-xl p-6">
+
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-clock mr-3 text-blue-500"></i>
+                            Office Hours
+                        </h2>
+                        <div class="space-y-3">
+                            {% for day in "Monday,Tuesday,Wednesday,Thursday,Friday"|split:"," %}
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">{{ day }}</span>
+                                    <span class="text-gray-900">
+                                        {% with hours=day|lower|add:"_hours" %}
+                                            {{ staff_profile|get_attribute:hours }}
+                                        {% endwith %}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 space-y-8">
+
+                    <div class="card-modern card-bio rounded-xl p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-user-circle mr-3 text-blue-500"></i>
+                            About Me
+                        </h2>
+                        <textarea name="bio" rows="4" 
+                                  class="input-modern w-full px-4 py-3 rounded-lg focus:outline-none resize-none"
+                                  placeholder="Tell us about yourself...">{{ staff_profile.bio }}</textarea>
+                    </div>
+
+                    <div class="card-modern card-additional rounded-xl p-6">
+
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-info-circle mr-3 text-blue-500"></i>
+                            About My Roles
+                        </h2>
+                        <textarea name="about_me" rows="4" 
+                                  class="input-modern w-full px-4 py-3 rounded-lg focus:outline-none resize-none">{{ staff_profile.about_me }}</textarea>
+                    </div>
+
+                    <div class="card-modern card-skills rounded-xl p-6">
+
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-tools mr-3 text-blue-500"></i>
+                            Skills & Expertise
+                        </h2>
+                        <div class="space-y-4">
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                {% for skill in staff_profile.skills|split:"," %}
+                                    {% if skill %}
+                                        <span class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">
+                                            {{ skill|strip }}
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Update Skills</label>
+                                <input type="text" 
+                                       name="skills" 
+                                       value="{{ staff_profile.skills }}"
+                                       placeholder="Enter skills separated by commas"
+                                       class="input-modern w-full px-4 py-3 rounded-lg focus:outline-none">
+                                <p class="mt-1 text-sm text-gray-500">Separate skills with commas (e.g., Python, Django, HTML)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+
+                        <button type="submit" 
+                                name="update_all"
+                                class="button-modern px-8 py-3 text-white rounded-lg font-medium flex items-center">
+                            <i class="fas fa-save mr-2"></i>
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        function toggleBioEdit() {
+            document.getElementById('bioDisplay').classList.toggle('hidden');
+            document.getElementById('bioForm').classList.toggle('hidden');
+        }
+
+        function toggleAdditionalEdit() {
+            document.getElementById('additionalDisplay').classList.toggle('hidden');
+            document.getElementById('additionalForm').classList.toggle('hidden');
+        }
+
+        // Show success msgs tempararily
+        document.addEventListener('DOMContentLoaded', function() {
+            const messages = document.querySelectorAll('.alert');
+            messages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.remove();
+                    }, 300);
+                }, 3000);
+            });
+        });
+
+        function toggleStatus() {
+            const currentStatus = document.querySelector('input[name="current_status"]').value;
+            const newStatus = currentStatus === 'available' ? 'unavailable' : 'available';
+            document.querySelector('input[name="current_status"]').value = newStatus;
+            // Update button appearance
+            const button = document.querySelector('button[onclick="toggleStatus()"]');
+            if (newStatus === 'available') {
+                button.classList.remove('bg-red-100', 'text-red-800', 'hover:bg-red-200');
+                button.classList.add('bg-green-100', 'text-green-800', 'hover:bg-green-200');
+                button.querySelector('span').classList.remove('bg-red-400');
+                button.querySelector('span').classList.add('bg-green-400');
+            } else {
+                button.classList.remove('bg-green-100', 'text-green-800', 'hover:bg-green-200');
+                button.classList.add('bg-red-100', 'text-red-800', 'hover:bg-red-200');
+                button.querySelector('span').classList.remove('bg-green-400');
+                button.querySelector('span').classList.add('bg-red-400');
+            }
+            button.innerHTML = `<span class="w-2 h-2 rounded-full mr-2 ${newStatus === 'available' ? 'bg-green-400' : 'bg-red-400'}"></span>${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`;
+        }
+    </script>
+</body>
+</html>

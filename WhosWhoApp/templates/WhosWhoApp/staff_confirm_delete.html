@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Staff - Who's Who</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-sans">
+    {% include 'WhosWhoApp/nav.html' %}
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-lg mx-auto bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold mb-6">Delete Staff Member</h2>
+            <p class="mb-4">Are you sure you want to delete {{ staff.name }}?</p>
+            <form method="post">
+                {% csrf_token %}
+                <div class="flex justify-end gap-4">
+                    <a href="{% url 'admin_dashboard' %}" class="px-4 py-2 border rounded-md hover:bg-gray-100">Cancel</a>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+</body>
+</html>

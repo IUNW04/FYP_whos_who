@@ -1,0 +1,1 @@
+web: gunicorn FYP_whos_who.wsgi:application --log-file -
