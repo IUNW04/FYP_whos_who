@@ -112,19 +112,13 @@ USE_TZ = True
 # Static files configuration
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'WhosWhoApp/static'),
-]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'WhosWhoApp/static')]
 
-# WhiteNoise configuration
-MIDDLEWARE = [
-    # ... other middleware
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    # ... other middleware
-]
-
-if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Use different storage backends based on DEBUG mode
+if DEBUG:
+	STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+else:
+	STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Cloudinary configuration
 CLOUDINARY_STORAGE = {
