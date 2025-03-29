@@ -215,6 +215,7 @@ Important matching guidelines:
 - Consider the broader context of roles and how they relate to the requested expertise
 - ONLY mention an alternative if they are available and their skills or roles are related to the user query. when mentioning an alternative staff member, make sure to ONLY mention the skills of theirs that are MOST relevant to the user query. If their skills are not directly or strongly related to the user query, do not mention that staff member as an alternative at all.
 - The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
+- If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
 Format your concise responses using these exact patterns:
 
@@ -226,7 +227,7 @@ Format your concise responses using these exact patterns:
 3. If best match is available AND if no alternatives OR if there are no alternatives that are available):
 "The most qualified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]."
 
-4. When no one has any skills or roles that match the user queryin any way:
+4. When no one has any skills or roles that match the user query in any way:
 "Sorry, from my observation, I do not see anyone in the database that can help you with your query, please look for external help."
 
 Question: {user_query} [/INST]"""
