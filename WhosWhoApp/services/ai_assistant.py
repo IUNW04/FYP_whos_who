@@ -58,7 +58,7 @@ class AIAssistant:
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
                 "temperature": 0.3,
-                "max_new_tokens": 300,  # Keep this higher since response is getting cut
+                "max_new_tokens": 150,  # Keep this higher since response is getting cut
                 "repetition_penalty": 1.1,
                 "timeout": 30  # Increased timeout to ensure complete response
             },
