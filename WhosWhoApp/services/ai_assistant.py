@@ -57,10 +57,10 @@ class AIAssistant:
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.31,
+                "temperature": 0.37,
                 "max_new_tokens": 150,  # Keep this higher since response is getting cut
                 "repetition_penalty": 1.1,
-                "timeout": 45  # Increased timeout to ensure complete response
+                "timeout": 20  # Increased timeout to ensure complete response
             },
             "mistral": {
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
