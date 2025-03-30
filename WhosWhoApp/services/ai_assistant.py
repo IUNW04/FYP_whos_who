@@ -52,15 +52,15 @@ class AIAssistant:
             "prompt": prompt,
             "stream": False,
             "do_sample": True,
-            "top_p": 0.8,
+            "top_p": 0.9,
         }
         
         # Model-specific configurations because theres diffrance in capability. DS is more powerful than Mistral
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.47,
-                "max_new_tokens": 300,
+                "temperature": 0.53,
+                "max_new_tokens": 150,
                 "repetition_penalty": 1.1,
                 "timeout": 20
             },
@@ -208,6 +208,7 @@ STRICT RESPONSE FORMAT REQUIREMENTS:
 - IN YOUR RESPONSE DO NOT INCLUDE YOUR THOUGHT PROCESS
 - KEEP YOUR RESPONSE CONCISE 
 - USERS MAY MAKE TYPOS SO TRY TO NORMALISE THE TEXT OF THE USER QUERY AS MUCH AS POSSIBLE
+
 
 Important matching guidelines:
 - Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x” relates to "domain x” which relates to “tool x” and staff x has this tool in his skillset therefore he is a match)
