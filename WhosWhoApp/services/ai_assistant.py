@@ -209,9 +209,6 @@ STRICT RESPONSE FORMAT REQUIREMENTS:
 - IN YOUR RESPONSE DO NOT INCLUDE YOUR THOUGHT PROCESS
 - KEEP YOUR RESPONSE CONCISE 
 - USERS MAY MAKE TYPOS SO TRY TO NORMALISE THE TEXT OF THE USER QUERY AS MUCH AS POSSIBLE
-- YOU MUST END YOUR TEXT RESPONSE AS SOON AS YOU METNION THE LAST STAFF MEMBERS AVAILABILITY 
-- CRIRICAL: YOU MUST RENDER STAFF LINKS USING HTML FORMAT <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> AT THE END OF YOUR RESPONSE
-
 
 Important matching guidelines:
 - Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x” relates to "domain x” which relates to “tool x” and staff x has this tool in his skillset therefore he is a match)
@@ -241,10 +238,10 @@ Question: {user_query} [/INST]"""
             return "AI assistant is currently unavailable. Please contact the administrator to set up the Hugging Face API token."
 
         try:
-            # Reset conversation history for each new query to prevent caching effects
             self.conversation_history = []
             
             all_staff = StaffProfile.objects.all()
+            # Simplified staff info without HTML formatting requirements
             staff_info = "\n".join([
                 f"Staff Member: {staff.name}"
                 f"\nPrimary Role: {staff.role}"
@@ -253,44 +250,57 @@ Question: {user_query} [/INST]"""
                 f"\nCore Skills: {staff.skills or 'Not specified'}"
                 f"\nAbout: {staff.about_me or 'Not specified'}"
                 f"\nStatus: {self.get_availability_status(staff)}"
-                f"\nEmail: {staff.email}"
                 f"\nID: {staff.id}\n"
                 for staff in all_staff
             ])
 
-            email_phrases = [
-                'write an email', 'compose an email', 'make email',
-                'create an email', 'draft an email', 'send an email', 'write email'
-            ]
-            is_email_request = any(phrase in user_query.lower() for phrase in email_phrases)
-
-            logging.debug(f"User Query: {user_query}, Detected Email Request: {is_email_request}")
-
-            recent_context = None  # Remove context for non-email requests
-            prompt = self.generate_prompt(user_query, staff_info, recent_context, is_email_request)
-
-            try:
-                response = self._make_api_request(prompt)
-                generated_text = ""
-                for chunk in response:
-                    if isinstance(chunk, str):
-                        generated_text += chunk
-                    else:
-                        generated_text += chunk.get("generated_text", "")
-
-                cleaned_response = self.clean_response(generated_text)
-                
-                # Only store history for email requests
-                if is_email_request:
-                    self.add_to_history(user_query, is_user=True)
-                    self.add_to_history(cleaned_response, is_user=False)
-                
-                return cleaned_response
-
-            except Exception as api_error:
-                logging.error(f"API Error: {str(api_error)}")
-                return "I'm having trouble with the AI service. Please try again in a few moments."
+            # Get raw response without staff links
+            raw_response = self._get_raw_response(user_query, staff_info)
+            
+            # Process the response to add staff links
+            processed_response = self._add_staff_links(raw_response, all_staff)
+            
+            return processed_response
 
         except Exception as e:
             logging.error(f"Error in get_response: {str(e)}")
             return "I'm having trouble processing your request. Please try again."
+
+    def _get_raw_response(self, user_query, staff_info):
+        prompt = f"""<s>[INST] Here is our staff directory:
+
+{staff_info}
+
+REQUIREMENTS:
+- Identify the most qualified person based on skills and role relevance
+- If best match is unavailable, suggest an available alternative with relevant skills
+- Keep responses concise and focused
+- Use this format for responses:
+
+1. For unavailable best match with alternative:
+"The most qualified person for this request is [Name] ([Role]) because [relevant skills]. Their current status is: [Status]. However, since they are unavailable, [Name] ([Role]) can help because [relevant skills]. Their status is: [Status]."
+
+2. For available best match or no alternative:
+"The most qualified person for this request is [Name] ([Role]) because [relevant skills]. Their current status is: [Status]."
+
+3. For no matches:
+"Sorry, from my observation, I do not see anyone in the database that can help you with your query, please look for external help."
+
+Question: {user_query} [/INST]"""
+
+        response = self._make_api_request(prompt)
+        generated_text = "".join(chunk if isinstance(chunk, str) else chunk.get("generated_text", "") for chunk in response)
+        return self.clean_response(generated_text)
+
+    def _add_staff_links(self, response, all_staff):
+        # Create a mapping of staff names to their IDs
+        staff_map = {staff.name: staff.id for staff in all_staff}
+        
+        # Find staff names in the response and add links
+        for name, staff_id in staff_map.items():
+            # Use word boundaries to avoid partial matches
+            pattern = fr'\b{re.escape(name)}\b(?!\s*</a>)'  # Avoid replacing already linked names
+            replacement = f'<a href="/staff/{staff_id}" class="staff-link">{name}</a>'
+            response = re.sub(pattern, replacement, response)
+        
+        return response
