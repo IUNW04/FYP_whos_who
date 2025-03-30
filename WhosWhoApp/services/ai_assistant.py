@@ -47,20 +47,22 @@ class AIAssistant:
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=2, min=4, max=20))
     def _make_api_request(self, prompt):
+
         base_params = {
             "prompt": prompt,
-            "stream": False,  # Ensure we get complete response
+            "stream": False,
             "do_sample": True,
             "top_p": 0.9,
         }
         
+        # Model-specific configurations because theres diffrance in capability. DS is more powerful than Mistral
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.31,
-                "max_new_tokens": 150,  # Keep this higher since response is getting cut
+                "temperature": 0.3,  # Keep the improved reasoning
+                "max_new_tokens": 150,  # Increased from 150 to allow for complete responses
                 "repetition_penalty": 1.1,
-                "timeout": 20  # Increased timeout to ensure complete response
+                "timeout": 20
             },
             "mistral": {
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
@@ -70,6 +72,7 @@ class AIAssistant:
                 "timeout": 10
             }
         }
+        
 
         def try_model(model_type):
             config = model_configs[model_type]
@@ -81,12 +84,9 @@ class AIAssistant:
                 future = executor.submit(self.client.text_generation, **params)
                 try:
                     return future.result(timeout=timeout)
-                except concurrent.futures.TimeoutError:
-                    logging.error(f"Timeout with {model_type} model")
-                    raise
                 except Exception as e:
                     logging.error(f"Error with {model_type} model: {str(e)}")
-                    raise
+                    raise e
 
         try:
             logging.info("Attempting DeepSeek model")
