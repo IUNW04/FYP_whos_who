@@ -6,187 +6,166 @@
         </button>
     </div>
     
-    <div id="chat-messages" class="h-96 overflow-y-auto p-4 space-y-4"></div>
+    <div id="chat-messages" class="h-96 overflow-y-auto p-4 space-y-4">
+        <div class="message-wrapper ai">
+            <i class="fas fa-robot message-icon"></i>
+            <div class="message ai">
+                <p>Hello! I'm the Who's Who AI Staff Finder. How can I help you today?</p>
+            </div>
+        </div>
+    </div>
     
-    <div class="border-t p-4">
-        <div class="flex items-center space-x-2">
+    <div class="input-area">
+        <div class="typing-indicator" id="typing-indicator">
+            <span>AI is typing</span>
+            <div class="typing-dots">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        </div>
+        <div class="input-container">
             <input type="text" 
                    id="chat-input" 
-                   class="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                    placeholder="Ask about staff...">
             <button type="button"
                     id="voice-chat-btn"
-                    class="p-3 text-gray-400 hover:text-indigo-600 transition-all duration-300 rounded-full hover:bg-gray-100 relative group"
                     title="Use voice input">
-                <i class="fas fa-microphone text-lg"></i>
+                <i class="fas fa-microphone"></i>
                 <span class="recording-pulse hidden"></span>
-                <span class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    Voice Search
-                </span>
             </button>
             <button onclick="sendMessage()" 
-                    class="bg-indigo-600 text-white px-4 py-2 rounded">
+                    id="send-button">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>
     </div>
 </div>
 
-<style>
-.recording-pulse {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: rgba(99, 102, 241, 0.2);
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-.recording-active {
-    color: #4F46E5 !important;
-    background-color: #EEF2FF;
-}
-
-@keyframes pulse {
-    0% {
-        transform: translate(-50%, -50%) scale(0.95);
-        opacity: 0.5;
-    }
-    70% {
-        transform: translate(-50%, -50%) scale(1.3);
-        opacity: 0;
-    }
-    100% {
-        transform: translate(-50%, -50%) scale(0.95);
-        opacity: 0;
-    }
-}
-</style>
-
 <script>
-const chatWidget = document.getElementById('chat-widget');
-const chatMessages = document.getElementById('chat-messages');
-const chatInput = document.getElementById('chat-input');
+    const chatWidget = document.getElementById('chat-widget');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const typingIndicator = document.getElementById('typing-indicator');
 
-function toggleChat() {
-    chatWidget.classList.toggle('scale-0');
-    chatWidget.classList.toggle('opacity-0');
-}
-
-function addMessage(content, isUser = false) {
-    const messageDiv = document.createElement('div');
-    messageDiv.classList.add(
-        'p-3', 
-        'rounded-lg', 
-        'max-w-[80%]',
-        isUser ? 'ml-auto bg-indigo-600 text-white' : 'bg-gray-100 text-gray-800'
-    );
-    if (isUser) {
-        messageDiv.textContent = content;
-    } else {
-        // Clean up any remaining malformed tags before inserting
-        content = content.replace(/<<|>>|<([^<>]+)</g, '<$1>');
-        messageDiv.innerHTML = content;
+    function toggleChat() {
+        chatWidget.classList.toggle('scale-0');
+        chatWidget.classList.toggle('opacity-0');
     }
-    
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
 
-async function sendMessage() {
-    const message = chatInput.value.trim();
-    if (!message) return;
-    
-    addMessage(message, true);
-    chatInput.value = '';
-    
-    try {
-        const response = await fetch('/chat-with-ai/', {  // Changed from /api/chat/ to /chat-with-ai/
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify({ message })
-        });
+    // Add message function from chat interface
+    function addMessage(text, isUser, staffInfo = null) {
+        const wrapperDiv = document.createElement('div');
+        wrapperDiv.className = `message-wrapper ${isUser ? 'user' : 'ai'}`;
         
-        const data = await response.json();
+        const iconElement = document.createElement('i');
+        iconElement.className = `fas ${isUser ? 'fa-user' : 'fa-robot'} message-icon`;
         
-        if (response.ok) {
-            addMessage(data.response, false);  // Added false parameter to indicate AI message
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+        
+        if (isUser) {
+            wrapperDiv.appendChild(messageDiv);
+            wrapperDiv.appendChild(iconElement);
+            
+            const messagePara = document.createElement('p');
+            messagePara.textContent = text;
+            messageDiv.appendChild(messagePara);
         } else {
+            wrapperDiv.appendChild(iconElement);
+            wrapperDiv.appendChild(messageDiv);
+            
+            const messagePara = document.createElement('p');
+            messagePara.innerHTML = text;
+            messageDiv.appendChild(messagePara);
+        }
+        
+        chatMessages.appendChild(wrapperDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+        
+        addMessage(message, true);
+        chatInput.value = '';
+        
+        // Show typing indicator
+        typingIndicator.classList.add('active');
+        
+        try {
+            const response = await fetch('/chat-with-ai/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ message })
+            });
+            
+            const data = await response.json();
+            
+            // Hide typing indicator
+            typingIndicator.classList.remove('active');
+            
+            if (response.ok) {
+                if (data.staff_info_list && data.staff_info_list.length > 0) {
+                    addMessage(data.response, false, data.staff_info_list);
+                } else {
+                    addMessage(data.response, false);
+                }
+            } else {
+                addMessage('Sorry, I encountered an error. Please try again.', false);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            typingIndicator.classList.remove('active');
             addMessage('Sorry, I encountered an error. Please try again.', false);
         }
-    } catch (error) {
-        console.error('Chat error:', error);
-        addMessage('Sorry, I encountered an error. Please try again.', false);
     }
-}
 
-// Listen for Enter key
-chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
-});
-
-// Update the existing chatbot icon click handler
-document.getElementById('chatbotIcon').addEventListener('click', toggleChat);
-
-// Add voice input functionality
-function updateVoiceButton(isRecording) {
-    const voiceBtn = document.getElementById('voice-chat-btn');
-    const pulseElement = voiceBtn.querySelector('.recording-pulse');
-    const icon = voiceBtn.querySelector('i');
-    
-    if (isRecording) {
-        icon.className = 'fas fa-microphone text-red-500 animate-pulse';
-        voiceBtn.classList.add('recording-active');
-        pulseElement.classList.remove('hidden');
-    } else {
-        icon.className = 'fas fa-microphone text-lg';
-        voiceBtn.classList.remove('recording-active');
-        pulseElement.classList.add('hidden');
-    }
-}
-
-document.getElementById('voice-chat-btn').addEventListener('click', function() {
-    if ('webkitSpeechRecognition' in window) {
-        const recognition = new webkitSpeechRecognition();
-        const chatInput = document.getElementById('chat-input');
-        
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => {
-            updateVoiceButton(true);
-            chatInput.placeholder = 'Listening...';
-        };
-
-        recognition.onend = () => {
-            updateVoiceButton(false);
-            chatInput.placeholder = 'Ask about staff...';
-        };
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            chatInput.value = transcript;
+    // Listen for Enter key
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
             sendMessage();
-        };
+        }
+    });
 
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            updateVoiceButton(false);
-            chatInput.placeholder = 'Ask about staff...';
-        };
+    // Voice chat functionality (same as chat interface)
+    document.getElementById('voice-chat-btn').addEventListener('click', function() {
+        if ('webkitSpeechRecognition' in window) {
+            const recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
 
-        recognition.start();
-    } else {
-        alert('Speech recognition is not supported in your browser. Please use Chrome.');
+            recognition.onstart = () => {
+                updateVoiceButton(true);
+                chatInput.placeholder = 'Listening...';
+            };
+
+            recognition.onend = () => {
+                updateVoiceButton(false);
+                chatInput.placeholder = 'Ask about staff...';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                chatInput.value = transcript;
+                sendMessage();
+            };
+
+            recognition.start();
+        }
+    });
+
+    function updateVoiceButton(isRecording) {
+        const pulseElement = document.querySelector('.recording-pulse');
+        if (isRecording) {
+            pulseElement.classList.remove('hidden');
+        } else {
+            pulseElement.classList.add('hidden');
+        }
     }
-});
 </script>
