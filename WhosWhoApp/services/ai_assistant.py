@@ -237,10 +237,9 @@ Question: {user_query} [/INST]"""
             return "AI assistant is currently unavailable. Please contact the administrator to set up the Hugging Face API token."
 
         try:
-            # Reset conversation history for each new query to prevent caching effects
-            self.conversation_history = []
-            
             all_staff = StaffProfile.objects.all()
+
+            # Create comprehensive staff info including bio
             staff_info = "\n".join([
                 f"Staff Member: {staff.name}"
                 f"\nPrimary Role: {staff.role}"
@@ -262,7 +261,7 @@ Question: {user_query} [/INST]"""
 
             logging.debug(f"User Query: {user_query}, Detected Email Request: {is_email_request}")
 
-            recent_context = None  # Remove context for non-email requests
+            recent_context = "\n".join([msg['content'] for msg in self.conversation_history[-3:]]) if is_email_request else None
             prompt = self.generate_prompt(user_query, staff_info, recent_context, is_email_request)
 
             try:
@@ -276,11 +275,8 @@ Question: {user_query} [/INST]"""
 
                 cleaned_response = self.clean_response(generated_text)
                 
-                # Only store history for email requests
-                if is_email_request:
-                    self.add_to_history(user_query, is_user=True)
-                    self.add_to_history(cleaned_response, is_user=False)
-                
+                self.add_to_history(user_query, is_user=True)
+                self.add_to_history(cleaned_response, is_user=False)
                 return cleaned_response
 
             except Exception as api_error:
