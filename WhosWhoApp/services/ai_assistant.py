@@ -47,7 +47,6 @@ class AIAssistant:
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=2, min=4, max=20))
     def _make_api_request(self, prompt):
-
         base_params = {
             "prompt": prompt,
             "stream": False,
@@ -55,16 +54,16 @@ class AIAssistant:
             "top_p": 0.9,
         }
         
-        # Model-specific configurations because theres diffrance in capability. DS is more powerful than Mistral
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.7,
-                "max_new_tokens": 500,
-                "repetition_penalty": 0.9,
+                "temperature": 0.5,  # Reduced from 0.7 for more focused responses
+                "max_new_tokens": 150,  # Reduced from 500 to encourage conciseness
+                "repetition_penalty": 1.1,  # Adjusted from 0.9
                 "timeout": 20
             },
             "mistral": {
+                # Mistral config remains the same
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
                 "temperature": 0.55,
                 "max_new_tokens": 200,
@@ -247,17 +246,13 @@ Question: {user_query} [/INST]"""
         try:
             all_staff = StaffProfile.objects.all()
 
-            # Create comprehensive staff info with domain emphasis
+            # Simplified, focused staff info
             staff_info = "\n".join([
                 f"Staff Member: {staff.name}"
-                f"\nPrimary Domain: {staff.role.split(' ')[0] if staff.role else 'Not specified'}"  # Extracts main field (e.g. "Civil" from "Civil Engineering")
-                f"\nPrimary Role: {staff.role}"
-                f"\nRole Description: {staff.bio or 'Not specified'}"
-                f"\nDepartment: {staff.department}"
-                f"\nDomain Expertise: {staff.skills or 'Not specified'}"  # Renamed from Core Skills to emphasize domain
-                f"\nAbout: {staff.about_me or 'Not specified'}"
+                f"\nRole: {staff.role}"
+                f"\nSkills: {staff.skills or 'Not specified'}"
+                 f"\nRole Description: {staff.bio or 'Not specified'}"
                 f"\nStatus: {self.get_availability_status(staff)}"
-                f"\nEmail: {staff.email}"
                 f"\nID: {staff.id}\n"
                 for staff in all_staff
             ])
