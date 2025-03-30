@@ -51,23 +51,22 @@ class AIAssistant:
             "prompt": prompt,
             "stream": False,
             "do_sample": True,
-            "top_p": 0.9,
+            "top_p": 0.7,  # Reduced from 0.9 for more precise matching
         }
         
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.5,  # Reduced from 0.7 for more focused responses
-                "max_new_tokens": 150,  # Reduced from 500 to encourage conciseness
-                "repetition_penalty": 1.1,  # Adjusted from 0.9
+                "temperature": 0.3,  # Reduced from 0.5 for more deterministic responses
+                "max_new_tokens": 150,
+                "repetition_penalty": 1.2,  # Increased from 1.1
                 "timeout": 20
             },
             "mistral": {
-                # Mistral config remains the same
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
-                "temperature": 0.55,
+                "temperature": 0.35,  # Reduced from 0.55
                 "max_new_tokens": 200,
-                "repetition_penalty": 1.05,
+                "repetition_penalty": 1.15,
                 "timeout": 10
             }
         }
