@@ -232,3 +232,31 @@ Question: {user_query} [/INST]"""
         except Exception as e:
             logging.error(f"Error in get_response: {str(e)}")
             return "I encountered an error while processing your request. Please try again."
+
+    def get_staff_info(self):
+        """Get formatted staff information for the prompt"""
+        try:
+            staff_profiles = StaffProfile.objects.select_related('department').all()
+            staff_info = []
+            
+            for staff in staff_profiles:
+                status = self.get_availability_status(staff)
+                skills = staff.get_skills()  # Using the get_skills method from StaffProfile
+                roles = staff.get_roles()    # Using the get_roles method from StaffProfile
+                
+                staff_entry = (
+                    f"Staff ID: {staff.id}\n"
+                    f"Name: {staff.name}\n"
+                    f"Role: {', '.join(roles)}\n"
+                    f"Department: {staff.department.name if staff.department else 'Not specified'}\n"
+                    f"Skills: {', '.join(skills)}\n"
+                    f"Role Description: {staff.bio if staff.bio else 'No role description provided'}\n"
+                    f"Status: {status}\n"
+                    "---"
+                )
+                staff_info.append(staff_entry)
+            
+            return "\n".join(staff_info)
+        except Exception as e:
+            logging.error(f"Error getting staff info: {str(e)}")
+            return "Error retrieving staff information"
