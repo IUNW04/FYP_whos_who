@@ -172,16 +172,19 @@ Important matching guidelines:
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
 Format your concise responses using these exact patterns:
 
-1. For staff mentions, use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
+1. For best match available, no alternatives:
+"The most qualified person for this request is <a href="/staff/{{staff_id}}" class="staff-link">[Name]</a> ([Role]) because [specific relevant skills/expertise]. Their current status is: Available."
 
-2. If best match is unavaible mention them however also mention the alternative if there is one AND if they are available):
-"The most qualified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]. However, since they are unavailable, <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) can help because [reason]. Their status is: [Status]."
+2. For best match unavailable with available alternative:
+"The most qualified person for this request is <a href="/staff/{{staff_id}}" class="staff-link">[Name]</a> ([Role]) because [specific relevant skills/expertise]. Their current status is: Unavailable. However, <a href="/staff/{{staff_id}}" class="staff-link">[Name]</a> ([Role]) can help because [specific relevant skills/expertise]. Their current status is: Available."
 
-3. If best match is available AND if no alternatives OR if there are no alternatives that are available):
-"The most qualified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]."
+3. For best match available with no suitable alternatives:
+"The most qualified person for this request is <a href="/staff/{{staff_id}}" class="staff-link">[Name]</a> ([Role]) because [specific relevant skills/expertise]. Their current status is: Available."
 
-4. When no one has any skills or roles that match the user query in any way:
+4. When no matches found:
 "Sorry, from my observation, I do not see anyone in the database that can help you with your query, please look for external help."
+
+IMPORTANT: ALWAYS use the HTML link format when mentioning staff members, even if they are unavailable.
 
 Question: {user_query} [/INST]"""
 
