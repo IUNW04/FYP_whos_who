@@ -206,6 +206,7 @@ STRICT RESPONSE FORMAT REQUIREMENTS:
 - THE MENTION OF BEST MATCHED STAFF IS NOT DEPENDANT ON AVAILABILITY
 - USE THE EXACT HTML FORMAT PROVIDED BELOW FOR STAFF LINKS
 - IN YOUR RESPONSE DO NOT INCLUDE YOUR THOUGHT PROCESS
+- KEEP YOUR RESPONSE CONCISE 
 - USERS MAY MAKE TYPOS SO TRY TO NORMALISE THE TEXT OF THE USER QUERY AS MUCH AS POSSIBLE
 
 Important matching guidelines:
@@ -216,7 +217,7 @@ Important matching guidelines:
 - The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
 - If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
-Format your responses using these exact patterns:
+Format your concise responses using these exact patterns:
 
 1. For staff mentions, use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 
