@@ -266,31 +266,28 @@ Question: {user_query} [/INST]"""
             logging.error(f"Error in get_response: {str(e)}")
             return "I'm having trouble processing your request. Please try again."
 
-    def _get_raw_response(self, user_query, staff_info):
-        prompt = f"""<s>[INST] Here is our staff directory:
+    def get_raw_response(self, user_query):
+        if not self.client:
+            return "AI assistant is currently unavailable."
 
-{staff_info}
+        try:
+            all_staff = StaffProfile.objects.all()
+            staff_info = "\n".join([
+                f"Staff Member: {staff.name}"
+                f"\nRole: {staff.role}"
+                f"\nSkills: {staff.skills or 'Not specified'}"
+                f"\nStatus: {self.get_availability_status(staff)}\n"
+                for staff in all_staff
+            ])
 
-REQUIREMENTS:
-- Identify the most qualified person based on skills and role relevance
-- If best match is unavailable, suggest an available alternative with relevant skills
-- Keep responses concise and focused
-- Use this format for responses:
+            prompt = self.generate_prompt(user_query, staff_info)
+            response = self._make_api_request(prompt)
+            text = "".join(chunk if isinstance(chunk, str) else chunk.get("generated_text", "") for chunk in response)
+            return self.clean_response(text)
 
-1. For unavailable best match with alternative:
-"The most qualified person for this request is [Name] ([Role]) because [relevant skills]. Their current status is: [Status]. However, since they are unavailable, [Name] ([Role]) can help because [relevant skills]. Their status is: [Status]."
-
-2. For available best match or no alternative:
-"The most qualified person for this request is [Name] ([Role]) because [relevant skills]. Their current status is: [Status]."
-
-3. For no matches:
-"Sorry, from my observation, I do not see anyone in the database that can help you with your query, please look for external help."
-
-Question: {user_query} [/INST]"""
-
-        response = self._make_api_request(prompt)
-        generated_text = "".join(chunk if isinstance(chunk, str) else chunk.get("generated_text", "") for chunk in response)
-        return self.clean_response(generated_text)
+        except Exception as e:
+            logging.error(f"Error in get_raw_response: {str(e)}")
+            return "I'm having trouble processing your request."
 
     def _add_staff_links(self, response, all_staff):
         # Create a mapping of staff names to their IDs
