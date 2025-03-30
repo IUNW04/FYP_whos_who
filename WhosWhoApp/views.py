@@ -23,7 +23,6 @@ import json
 import logging
 import re
 from django.middleware.csrf import get_token  # Add this import
-from django.views.decorators.http import require_http_methods
 
 try:
     ai_assistant = AIAssistant()
@@ -629,49 +628,56 @@ def staff_dashboard(request):
         'staff_profile': staff_profile
     })
 
-@require_http_methods(["POST"])
 def chat_with_ai(request):
-    try:
-        data = json.loads(request.body)
-        user_message = data.get('message', '')
-        
-        # Get raw response first
-        raw_response = ai_assistant.get_raw_response(user_message)
-        
-        # Extract staff names from response
-        staff_names = re.findall(r'\b([A-Z][a-z]+ [A-Z][a-z]+)\b', raw_response)
-        
-        # Get staff info separately
-        staff_info_list = []
-        for name in staff_names:
-            try:
-                staff = StaffProfile.objects.get(name=name)
-                staff_info = {
-                    'id': staff.id,
-                    'name': staff.name,
-                    'role': staff.role,
-                    'department': staff.department.name if staff.department else 'Not specified'
-                }
-                staff_info_list.append(staff_info)
-            except StaffProfile.DoesNotExist:
-                continue
-        
-        # Add links to response after getting staff info
-        response = raw_response
-        for staff in staff_info_list:
-            response = response.replace(
-                staff['name'],
-                f'<a href="/staff/{staff["id"]}" class="staff-link">{staff["name"]}</a>'
-            )
-        
-        return JsonResponse({
-            'response': response,
-            'staff_info_list': staff_info_list
-        })
-        
-    except Exception as e:
-        logging.error(f"Error in chat_with_ai: {str(e)}")
-        return JsonResponse({'error': str(e)}, status=500)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '')
+            
+            if not user_message:
+                return JsonResponse({'error': 'No message provided'}, status=400)
+            
+            if not ai_assistant:
+                return JsonResponse({
+                    'response': 'AI assistant is currently unavailable. Please contact the administrator.'
+                })
+            
+            response = ai_assistant.get_response(user_message)
+            
+            # Check if the response contains staff links
+            staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
+            
+            # Find all staff links in the response
+            staff_info_list = []
+            
+            for match in re.finditer(staff_link_pattern, response):
+                staff_id = match.group(1)
+                try:
+                    staff = StaffProfile.objects.get(id=staff_id)
+                    staff_info = {
+                        'id': staff.id,
+                        'name': staff.name,
+                        'role': staff.role,
+                        'department': staff.department.name if staff.department else 'Not specified'
+                    }
+                    staff_info_list.append(staff_info)
+                except StaffProfile.DoesNotExist:
+                    pass
+            
+            # Clean the response by removing the staff link HTML
+            clean_response = re.sub(staff_link_pattern, r'\2', response)
+            
+            return JsonResponse({
+                'response': clean_response,
+                'staff_info_list': staff_info_list
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
 @login_required
