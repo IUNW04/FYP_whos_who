@@ -52,15 +52,15 @@ class AIAssistant:
             "prompt": prompt,
             "stream": False,
             "do_sample": True,
-            "top_p": 0.9,
+            "top_p": 0.8,
         }
         
         # Model-specific configurations because theres diffrance in capability. DS is more powerful than Mistral
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.52,
-                "max_new_tokens": 150,
+                "temperature": 0.47,
+                "max_new_tokens": 300,
                 "repetition_penalty": 1.1,
                 "timeout": 20
             },
