@@ -209,6 +209,8 @@ STRICT RESPONSE FORMAT REQUIREMENTS:
 - KEEP YOUR RESPONSE CONCISE 
 - USERS MAY MAKE TYPOS SO TRY TO NORMALISE THE TEXT OF THE USER QUERY AS MUCH AS POSSIBLE
 
+
+
 Important matching guidelines:
 - Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x” relates to "domain x” which relates to “tool x” and staff x has this tool in his skillset therefore he is a match)
 - Look for both exact matches and semantically related skills in staff profiles
@@ -217,6 +219,12 @@ Important matching guidelines:
 - The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
 - If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query. To do this you will need to analuse ALL the skills of the staff member and think about which skills are most relevant to the user query. Consider both theoretical knowledge and practical application in the field
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
+
+Matching Priority (in order):
+1. Primary Domain relevance to the query subject matter
+2. Specific expertise within that domain
+3. Related skills and experience
+
 Format your concise responses using these exact patterns:
 
 1. For staff mentions, use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
@@ -239,13 +247,14 @@ Question: {user_query} [/INST]"""
         try:
             all_staff = StaffProfile.objects.all()
 
-            # Create comprehensive staff info including bio
+            # Create comprehensive staff info with domain emphasis
             staff_info = "\n".join([
                 f"Staff Member: {staff.name}"
+                f"\nPrimary Domain: {staff.role.split(' ')[0] if staff.role else 'Not specified'}"  # Extracts main field (e.g. "Civil" from "Civil Engineering")
                 f"\nPrimary Role: {staff.role}"
                 f"\nRole Description: {staff.bio or 'Not specified'}"
                 f"\nDepartment: {staff.department}"
-                f"\nCore Skills: {staff.skills or 'Not specified'}"
+                f"\nDomain Expertise: {staff.skills or 'Not specified'}"  # Renamed from Core Skills to emphasize domain
                 f"\nAbout: {staff.about_me or 'Not specified'}"
                 f"\nStatus: {self.get_availability_status(staff)}"
                 f"\nEmail: {staff.email}"
