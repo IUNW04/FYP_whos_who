@@ -47,26 +47,28 @@ class AIAssistant:
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=2, min=4, max=20))
     def _make_api_request(self, prompt):
+
         base_params = {
             "prompt": prompt,
             "stream": False,
             "do_sample": True,
-            "top_p": 0.7,  # Reduced from 0.9 for more precise matching
+            "top_p": 0.9,
         }
         
+        # Model-specific configurations because theres diffrance in capability. DS is more powerful than Mistral
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.3,  # Reduced from 0.5 for more deterministic responses
+                "temperature": 0.52,
                 "max_new_tokens": 150,
-                "repetition_penalty": 1.2,  # Increased from 1.1
+                "repetition_penalty": 1.1,
                 "timeout": 20
             },
             "mistral": {
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
-                "temperature": 0.35,  # Reduced from 0.55
+                "temperature": 0.55,
                 "max_new_tokens": 200,
-                "repetition_penalty": 1.15,
+                "repetition_penalty": 1.05,
                 "timeout": 10
             }
         }
@@ -204,10 +206,7 @@ STRICT RESPONSE FORMAT REQUIREMENTS:
 - THE MENTION OF BEST MATCHED STAFF IS NOT DEPENDANT ON AVAILABILITY
 - USE THE EXACT HTML FORMAT PROVIDED BELOW FOR STAFF LINKS
 - IN YOUR RESPONSE DO NOT INCLUDE YOUR THOUGHT PROCESS
-- KEEP YOUR RESPONSE CONCISE 
 - USERS MAY MAKE TYPOS SO TRY TO NORMALISE THE TEXT OF THE USER QUERY AS MUCH AS POSSIBLE
-
-
 
 Important matching guidelines:
 - Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x” relates to "domain x” which relates to “tool x” and staff x has this tool in his skillset therefore he is a match)
@@ -215,15 +214,9 @@ Important matching guidelines:
 - Consider the broader context of roles and how they relate to the requested expertise
 - ONLY mention an alternative if they are available and their skills or roles are related to the user query. when mentioning an alternative staff member, make sure to ONLY mention the skills of theirs that are MOST relevant to the user query. If their skills are not directly or strongly related to the user query, do not mention that staff member as an alternative at all.
 - The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
-- If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query. To do this you will need to analuse ALL the skills of the staff member and think about which skills are most relevant to the user query. Consider both theoretical knowledge and practical application in the field
+- If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
-
-Matching Priority (in order):
-1. Primary Domain relevance to the query subject matter
-2. Specific expertise within that domain
-3. Related skills and experience
-
-Format your concise responses using these exact patterns:
+Format your responses using these exact patterns:
 
 1. For staff mentions, use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 
@@ -245,13 +238,16 @@ Question: {user_query} [/INST]"""
         try:
             all_staff = StaffProfile.objects.all()
 
-            # Simplified, focused staff info
+            # Create comprehensive staff info including bio
             staff_info = "\n".join([
                 f"Staff Member: {staff.name}"
-                f"\nRole: {staff.role}"
-                f"\nSkills: {staff.skills or 'Not specified'}"
-                 f"\nRole Description: {staff.bio or 'Not specified'}"
+                f"\nPrimary Role: {staff.role}"
+                f"\nRole Description: {staff.bio or 'Not specified'}"
+                f"\nDepartment: {staff.department}"
+                f"\nCore Skills: {staff.skills or 'Not specified'}"
+                f"\nAbout: {staff.about_me or 'Not specified'}"
                 f"\nStatus: {self.get_availability_status(staff)}"
+                f"\nEmail: {staff.email}"
                 f"\nID: {staff.id}\n"
                 for staff in all_staff
             ])
