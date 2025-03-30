@@ -97,31 +97,80 @@ class AIAssistant:
 
 
 
+
     def clean_response(self, text):
-        # Only clean obvious formatting issues
-        text = re.sub(r'\s+', ' ', text)
-        text = text.strip()
+        # Store staff links and verify names
+        staff_links = []
+        staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
         
-        # Ensure response starts with expected patterns
-        if not (text.startswith("The most qualified person") or text.startswith("Sorry, from my observation")):
-            if "The most qualified person" in text:
+        def get_correct_name(staff_id):
+            try:
+                staff = StaffProfile.objects.get(id=staff_id)
+                return staff.name
+            except StaffProfile.DoesNotExist:
+                return '[Unknown Staff]'
+        
+        # Replace any mismatched names in staff links
+        def replace_with_correct_name(match):
+            staff_id = match.group(1)
+            correct_name = get_correct_name(staff_id)
+            return f'<a href="/staff/{staff_id}" class="staff-link">{correct_name}</a>'
+        
+        text = re.sub(staff_link_pattern, replace_with_correct_name, text)
+        
+        # Expanded list of patterns to remove explanations and thinking
+        explanation_patterns = [
+            r'Step-by-step explanation:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Understanding the Query:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Here\'s why:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Analysis:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Let me explain:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'\d+\.\s+.*?(?=The most qualified person|Sorry, from my observation|$)',  # Numbered explanations
+            r'\*\*.*?\*\*',  # Remove markdown bold text often used in explanations
+        ] + [
+            f'{starter}.*?(?=The most qualified person|Sorry, from my observation|$)'
+            for starter in [
+                '<think>', 'Thinking:', 'Let me analyze', 'Let me see',
+                'Let me check', 'Let me look', 'Let me find', 'Let me help',
+                'First I need to', 'First, I need to', 'I need to',
+                'I will first', 'I will check', 'I will look', 'I will search',
+                'I will find', 'To answer this', 'Let\'s look at', 'Let\'s see',
+            ]
+        ]
+        
+        # Apply all patterns
+        for pattern in explanation_patterns:
+            text = re.sub(pattern, '', text, flags=re.DOTALL | re.IGNORECASE)
+        
+        # Store staff links before cleaning
+        staff_links = []
+        staff_link_pattern = r'a href="/staff/\d+" class="staff-link"[^/]+/a'
+        matches = re.finditer(staff_link_pattern, text)
+        for i, match in enumerate(matches):
+            staff_links.append(match.group(0))
+            text = text.replace(match.group(0), f'STAFFLINK_{i}_PLACEHOLDER')
+        
+        # Clean up formatting but preserve staff link placeholders
+        text = re.sub(r'(Question:|Answer:|Human:|Assistant:|</think>|First,|Initially,|Finally,|In conclusion,|Therefore,|So,|As a result,)', '', text)
+        text = re.sub(r'\n+', ' ', text)
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Restore staff links
+        for i, link in enumerate(staff_links):
+            text = text.replace(f'STAFFLINK_{i}_PLACEHOLDER', link)
+        
+        # Ensure response starts with expected patterns and remove duplicates
+        if "The most qualified person" in text:
+            parts = text.split("The most qualified person")
+            if len(parts) > 2:
+                text = "The most qualified person" + parts[1]
+            if not text.strip().startswith("The most qualified person"):
                 text = "The most qualified person" + text.split("The most qualified person")[1]
-            elif "Sorry, from my observation" in text:
+        elif "Sorry, from my observation" in text:
+            if not text.strip().startswith("Sorry, from my observation"):
                 text = "Sorry, from my observation" + text.split("Sorry, from my observation")[1]
         
-        # Complete any cut-off staff links
-        staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
-        if text.count('<a href="/staff/') > text.count('</a>'):
-            incomplete_link_match = re.search(r'<a href="/staff/(\d+)" class="staff-link">([^<]*?)$', text)
-            if incomplete_link_match:
-                staff_id = incomplete_link_match.group(1)
-                try:
-                    staff = StaffProfile.objects.get(id=staff_id)
-                    text = text.rstrip() + f"{staff.name}</a>"
-                except StaffProfile.DoesNotExist:
-                    pass
-
-        return text
+        return text.strip()
 
     def generate_prompt(self, user_query, staff_info, context_text=None, is_email_request=False):
 
@@ -172,19 +221,16 @@ Important matching guidelines:
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
 Format your concise responses using these exact patterns:
 
-1. For best match available, no alternatives:
-"The most qualified person for this request is <a href="/staff/{{staff_id}}" class="staff-link">[Name]</a> ([Role]) because [specific relevant skills/expertise]. Their current status is: Available."
+1. For staff mentions, use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 
-2. For best match unavailable with available alternative:
-"The most qualified person for this request is <a href="/staff/{{staff_id}}" class="staff-link">[Name]</a> ([Role]) because [specific relevant skills/expertise]. Their current status is: Unavailable. However, <a href="/staff/{{staff_id}}" class="staff-link">[Name]</a> ([Role]) can help because [specific relevant skills/expertise]. Their current status is: Available."
+2. If best match is unavaible mention them however also mention the alternative if there is one AND if they are available):
+"The most qualified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]. However, since they are unavailable, <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) can help because [reason]. Their status is: [Status]."
 
-3. For best match available with no suitable alternatives:
-"The most qualified person for this request is <a href="/staff/{{staff_id}}" class="staff-link">[Name]</a> ([Role]) because [specific relevant skills/expertise]. Their current status is: Available."
+3. If best match is available AND if no alternatives OR if there are no alternatives that are available):
+"The most qualified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]."
 
-4. When no matches found:
+4. When no one has any skills or roles that match the user query in any way:
 "Sorry, from my observation, I do not see anyone in the database that can help you with your query, please look for external help."
-
-IMPORTANT: ALWAYS use the HTML link format when mentioning staff members, even if they are unavailable.
 
 Question: {user_query} [/INST]"""
 
@@ -193,73 +239,56 @@ Question: {user_query} [/INST]"""
             return "AI assistant is currently unavailable. Please contact the administrator to set up the Hugging Face API token."
 
         try:
-            # Get staff info and generate prompt
-            staff_info = self.get_staff_info()
-            email_phrases = ['write an email', 'send an email', 'draft an email', 'compose an email']
+            # Reset conversation history for each new query to prevent caching effects
+            self.conversation_history = []
+            
+            all_staff = StaffProfile.objects.all()
+            staff_info = "\n".join([
+                f"Staff Member: {staff.name}"
+                f"\nPrimary Role: {staff.role}"
+                f"\nRole Description: {staff.bio or 'Not specified'}"
+                f"\nDepartment: {staff.department}"
+                f"\nCore Skills: {staff.skills or 'Not specified'}"
+                f"\nAbout: {staff.about_me or 'Not specified'}"
+                f"\nStatus: {self.get_availability_status(staff)}"
+                f"\nEmail: {staff.email}"
+                f"\nID: {staff.id}\n"
+                for staff in all_staff
+            ])
+
+            email_phrases = [
+                'write an email', 'compose an email', 'make email',
+                'create an email', 'draft an email', 'send an email', 'write email'
+            ]
             is_email_request = any(phrase in user_query.lower() for phrase in email_phrases)
 
             logging.debug(f"User Query: {user_query}, Detected Email Request: {is_email_request}")
 
-            recent_context = None
+            recent_context = None  # Remove context for non-email requests
             prompt = self.generate_prompt(user_query, staff_info, recent_context, is_email_request)
 
-            # Make API request with consistent parameters
-            response = self._make_api_request(prompt)
-            
-            # Log raw response for debugging
-            logging.debug(f"Raw API response: {response}")
+            try:
+                response = self._make_api_request(prompt)
+                generated_text = ""
+                for chunk in response:
+                    if isinstance(chunk, str):
+                        generated_text += chunk
+                    else:
+                        generated_text += chunk.get("generated_text", "")
 
-            # Process the response
-            generated_text = ""
-            if isinstance(response, str):
-                generated_text = response
-            else:
-                generated_text = response.get("generated_text", "")
+                cleaned_response = self.clean_response(generated_text)
+                
+                # Only store history for email requests
+                if is_email_request:
+                    self.add_to_history(user_query, is_user=True)
+                    self.add_to_history(cleaned_response, is_user=False)
+                
+                return cleaned_response
 
-            # Log generated text before cleaning
-            logging.debug(f"Generated text before cleaning: {generated_text}")
-
-            # Clean the response without modifying core content
-            cleaned_response = self.clean_response(generated_text)
-            
-            # Log cleaned response
-            logging.debug(f"Cleaned response: {cleaned_response}")
-
-            # Only store history for email requests
-            if is_email_request:
-                self.add_to_history(user_query, is_user=True)
-                self.add_to_history(cleaned_response, is_user=False)
-
-            return cleaned_response
+            except Exception as api_error:
+                logging.error(f"API Error: {str(api_error)}")
+                return "I'm having trouble with the AI service. Please try again in a few moments."
 
         except Exception as e:
             logging.error(f"Error in get_response: {str(e)}")
-            return "I encountered an error while processing your request. Please try again."
-
-    def get_staff_info(self):
-        """Get formatted staff information for the prompt"""
-        try:
-            staff_profiles = StaffProfile.objects.select_related('department').all()
-            staff_info = []
-            
-            for staff in staff_profiles:
-                status = self.get_availability_status(staff)
-                skills = staff.get_skills()  # Using the get_skills method from StaffProfile
-                roles = staff.get_roles()    # Using the get_roles method from StaffProfile
-                
-                staff_entry = (
-                    f"Staff ID: {staff.id}\n"
-                    f"Name: {staff.name}\n"
-                    f"Role: {', '.join(roles)}\n"
-                    f"Department: {staff.department.name if staff.department else 'Not specified'}\n"
-                    f"Skills: {', '.join(skills)}\n"
-                    f"Role Description: {staff.bio if staff.bio else 'No role description provided'}\n"
-                    f"Status: {status}\n"
-                    "---"
-                )
-                staff_info.append(staff_entry)
-            
-            return "\n".join(staff_info)
-        except Exception as e:
-            logging.error(f"Error getting staff info: {str(e)}")
-            return "Error retrieving staff information"
+            return "I'm having trouble processing your request. Please try again."
