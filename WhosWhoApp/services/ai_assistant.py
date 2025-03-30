@@ -57,7 +57,7 @@ class AIAssistant:
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.37,
+                "temperature": 0.31,
                 "max_new_tokens": 150,  # Keep this higher since response is getting cut
                 "repetition_penalty": 1.1,
                 "timeout": 20  # Increased timeout to ensure complete response
@@ -103,6 +103,31 @@ class AIAssistant:
         staff_links = []
         staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
         
+        # If response is cut off mid-staff-link, attempt to complete it
+        if text.count('<a href="/staff/') > text.count('</a>'):
+            incomplete_link_match = re.search(r'<a href="/staff/(\d+)" class="staff-link">([^<]*?)$', text)
+            if incomplete_link_match:
+                staff_id = incomplete_link_match.group(1)
+                try:
+                    staff = StaffProfile.objects.get(id=staff_id)
+                    text = text.rstrip() + f"{staff.name}</a>"
+                except StaffProfile.DoesNotExist:
+                    pass
+        
+        # If response is cut off after staff link but before status
+        if "Their current status is:" not in text and "Their status is:" not in text:
+            staff_link_match = re.search(staff_link_pattern, text)
+            if staff_link_match:
+                staff_id = staff_link_match.group(1)
+                try:
+                    staff = StaffProfile.objects.get(id=staff_id)
+                    status = self.get_availability_status(staff)
+                    if not text.strip().endswith('.'):
+                        text = text.rstrip() + '.'
+                    text += f" Their status is: {status}"
+                except StaffProfile.DoesNotExist:
+                    pass
+
         def get_correct_name(staff_id):
             try:
                 staff = StaffProfile.objects.get(id=staff_id)
