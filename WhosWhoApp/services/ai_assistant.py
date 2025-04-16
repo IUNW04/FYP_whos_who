@@ -11,10 +11,6 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
-
-
-
-
 class AIAssistant:
     # Status constants
     STATUS_AVAILABLE = 'available'
@@ -29,16 +25,13 @@ class AIAssistant:
         else:
             self.client = None
 
-
     def add_to_history(self, message, is_user=True):
-
         self.conversation_history.append({
             'role': 'user' if is_user else 'assistant',
             'content': message
         })
 
     def get_availability_status(self, staff):
-
         if staff.status == self.STATUS_AVAILABLE:
             return "Available"
         elif staff.custom_status:
@@ -47,7 +40,6 @@ class AIAssistant:
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=2, min=4, max=20))
     def _make_api_request(self, prompt):
-
         base_params = {
             "prompt": prompt,
             "stream": False,
@@ -73,7 +65,6 @@ class AIAssistant:
             }
         }
         
-
         def try_model(model_type):
             config = model_configs[model_type]
             params = {**base_params, **config}
@@ -94,9 +85,6 @@ class AIAssistant:
         except Exception:
             logging.info("Switching to Mistral model")
             return try_model("mistral")
-
-
-
 
     def clean_response(self, text):
         # Store staff links and verify names
@@ -172,11 +160,26 @@ class AIAssistant:
         
         return text.strip()
 
+    def format_conversation_history(self):
+        """Format the conversation history for inclusion in prompts"""
+        if not self.conversation_history:
+            return ""
+            
+        formatted_history = "Recent conversation history:\n"
+        for message in self.conversation_history[-5:]:  # Limit to last 5 messages to avoid context overflow
+            role = "User" if message["role"] == "user" else "Assistant"
+            formatted_history += f"{role}: {message['content']}\n\n"
+        
+        return formatted_history
+
     def generate_prompt(self, user_query, staff_info, context_text=None, is_email_request=False):
+        # Get formatted conversation history
+        conversation_context = self.format_conversation_history()
 
         if is_email_request:
             return f"""<s>[INST] Recent conversation context:
-{context_text}
+{conversation_context}
+{context_text or ""}
 
 Write a professional email:
 - Concise and friendly.
@@ -195,7 +198,8 @@ Best regards,
 
 [/INST]"""
         else:
-            return f"""<s>[INST] Here is our staff directory:
+            return f"""<s>[INST] {conversation_context}
+Here is our staff directory:
 
 {staff_info}
 
@@ -210,10 +214,10 @@ RESPONSE GUIDELINES:
 - KEEP YOUR RESPONSE CONCISE 
 - USERS MAY MAKE TYPOS SO TRY TO NORMALISE THE TEXT OF THE USER QUERY AS MUCH AS POSSIBLE
 - ALTERNATIVE STAFF MEMBER MENTIONS (IF APPLICABLE) MUST BE LIMITED TO ONE
-- IMPORTANT: For staff mentions, you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
+- IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 
 Important matching guidelines:
-- Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x” relates to "domain x” which relates to “tool x” and staff x has this tool in his skillset therefore he is a match)
+- Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x" relates to "domain x" which relates to "tool x" and staff x has this tool in his skillset therefore he is a match)
 - Look for both exact matches and semantically related skills in staff profiles
 - Consider the broader context of roles and how they relate to the requested expertise
 - ONLY mention an alternative if they are available and their skills or roles are related to the user query. when mentioning an alternative staff member, make sure to ONLY mention the skills of theirs that are MOST relevant to the user query. If their skills are not directly or strongly related to the user query, do not mention that staff member as an alternative at all.
@@ -225,68 +229,57 @@ Important matching guidelines:
 
 Question: {user_query} [/INST]"""
 
-def get_response(self, user_query):
-    if not self.client:
-        return "AI assistant is currently unavailable. Please contact the administrator to set up the Hugging Face API token."
+    def get_response(self, user_query):
+        if not self.client:
+            return "AI assistant is currently unavailable. Please contact the administrator to set up the Hugging Face API token."
 
-    try:
-        all_staff = StaffProfile.objects.all()
-        staff_info = "\n".join([
-            f"Staff Member: {staff.name}"
-            f"\nPrimary Role: {staff.role}"
-            f"\nRole Description: {staff.bio or 'Not specified'}"
-            f"\nDepartment: {staff.department}"
-            f"\nCore Skills: {staff.skills or 'Not specified'}"
-            f"\nAbout: {staff.about_me or 'Not specified'}"
-            f"\nStatus: {self.get_availability_status(staff)}"
-            f"\nEmail: {staff.email}"
-            f"\nID: {staff.id}\n"
-            for staff in all_staff
-        ])
-
-        email_phrases = [
-            'write an email', 'compose an email', 'make email',
-            'create an email', 'draft an email', 'send an email', 'write email'
-        ]
-        is_email_request = any(phrase in user_query.lower() for phrase in email_phrases)
-
-        if is_email_request:
-            # Get the most recent non-email query and its response
-            recent_context = ""
-            for i in range(len(self.conversation_history) - 1, -1, -1):
-                msg = self.conversation_history[i]
-                if "The most qualified person for this request is" in msg['content']:
-                    recent_context = f"Previous Query: {self.conversation_history[i-1]['content']}\nResponse: {msg['content']}"
-                    break
-            
-            if not recent_context:
-                return "Please first ask who can help with your request before drafting an email."
-        else:
-            recent_context = None
-
-        prompt = self.generate_prompt(user_query, staff_info, recent_context, is_email_request)
-        
         try:
-            response = self._make_api_request(prompt)
-            generated_text = ""
-            for chunk in response:
-                if isinstance(chunk, str):
-                    generated_text += chunk
-                else:
-                    generated_text += chunk.get("generated_text", "")
+            all_staff = StaffProfile.objects.all()
+            staff_info = "\n".join([
+                f"Staff Member: {staff.name}"
+                f"\nPrimary Role: {staff.role}"
+                f"\nRole Description: {staff.bio or 'Not specified'}"
+                f"\nDepartment: {staff.department}"
+                f"\nCore Skills: {staff.skills or 'Not specified'}"
+                f"\nAbout: {staff.about_me or 'Not specified'}"
+                f"\nStatus: {self.get_availability_status(staff)}"
+                f"\nEmail: {staff.email}"
+                f"\nID: {staff.id}\n"
+                for staff in all_staff
+            ])
 
-            cleaned_response = self.clean_response(generated_text)
-            
-            # Store history for both email and non-email requests
-            self.add_to_history(user_query, is_user=True)
-            self.add_to_history(cleaned_response, is_user=False)
-            
-            return cleaned_response
+            email_phrases = [
+                'write an email', 'compose an email', 'make email',
+                'create an email', 'draft an email', 'send an email', 'write email'
+            ]
+            is_email_request = any(phrase in user_query.lower() for phrase in email_phrases)
 
-        except Exception as api_error:
-            logging.error(f"API Error: {str(api_error)}")
-            return "I'm having trouble with the AI service. Please try again in a few moments."
+            logging.debug(f"User Query: {user_query}, Detected Email Request: {is_email_request}")
 
-    except Exception as e:
-        logging.error(f"Error in get_response: {str(e)}")
-        return "I'm having trouble processing your request. Please try again."
+            recent_context = None  # Remove context for non-email requests
+            prompt = self.generate_prompt(user_query, staff_info, recent_context, is_email_request)
+
+            try:
+                response = self._make_api_request(prompt)
+                generated_text = ""
+                for chunk in response:
+                    if isinstance(chunk, str):
+                        generated_text += chunk
+                    else:
+                        generated_text += chunk.get("generated_text", "")
+
+                cleaned_response = self.clean_response(generated_text)
+                
+                # Always store in history for all request types
+                self.add_to_history(user_query, is_user=True)
+                self.add_to_history(cleaned_response, is_user=False)
+                
+                return cleaned_response
+
+            except Exception as api_error:
+                logging.error(f"API Error: {str(api_error)}")
+                return "I'm having trouble with the AI service. Please try again in a few moments."
+
+        except Exception as e:
+            logging.error(f"Error in get_response: {str(e)}")
+            return "I'm having trouble processing your request. Please try again."
