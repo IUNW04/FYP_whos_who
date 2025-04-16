@@ -64,7 +64,7 @@ class AIAssistant:
                 "timeout": 10
             }
         }
-        
+
         def try_model(model_type):
             config = model_configs[model_type]
             params = {**base_params, **config}
@@ -97,6 +97,12 @@ class AIAssistant:
                 return staff.name
             except StaffProfile.DoesNotExist:
                 return '[Unknown Staff]'
+        
+        # Convert markdown-style links to proper HTML staff links
+        markdown_link_pattern = r'\[([^\]]+)\]\(\/staff\/(\d+)\)'
+        text = re.sub(markdown_link_pattern, 
+                     r'<a href="/staff/\2" class="staff-link">\1</a>', 
+                     text)
         
         # Replace any mismatched names in staff links
         def replace_with_correct_name(match):
