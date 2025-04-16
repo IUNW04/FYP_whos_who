@@ -236,7 +236,7 @@ Important matching guidelines:
 - If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
 - IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
-- IMPORTANT: include the current availability [Status] of each staff member you mention in your response. if staff members haave a custom status, include the exact custom status in your response.
+- IMPORTANT: include the current availability [Status] of each staff member you mention in your response.
 - be concise in you responses but dont be to brief.
 
 Question: {user_query} [/INST]"""
