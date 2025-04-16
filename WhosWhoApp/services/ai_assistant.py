@@ -237,7 +237,7 @@ Important matching guidelines:
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
 - IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 - IMPORTANT: include the current availability status of each staff member you mention in your response.
-- be concise in you responses but dont be to brief.
+- be concise in your responses but dont be to brief and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links.
 
 Question: {user_query} [/INST]"""
 
