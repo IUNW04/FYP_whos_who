@@ -229,7 +229,9 @@ Format your concise responses using these exact patterns:
 3. If best match is available AND if no alternatives OR if there are no alternatives that are available):
 "The most qualified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]."
 
-4. When no one has any skills or roles that match the user query in any way:
+4. if format 2 and 3 are not applicable, maybe because of the sentence starter or structure is not suitable for the response to the user query, you may use your own format but for staff mention must use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
+
+5. When no one has any skills or roles that match the user query in any way:
 "Sorry, from my observation, I do not see anyone in the database that can help you with your query, please look for external help."
 
 Question: {user_query} [/INST]"""
