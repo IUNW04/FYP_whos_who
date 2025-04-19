@@ -257,6 +257,7 @@ Question: {user_query} [/INST]"""
                 f"\nAbout: {staff.about_me or 'Not specified'}"
                 f"\nStatus: {self.get_availability_status(staff)}"
                 f"\nEmail: {staff.email}"
+                f"\nLocation: {staff.location or 'Not specified'}"
                 f"\nID: {staff.id}\n"
                 for staff in all_staff
             ])
