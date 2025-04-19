@@ -143,11 +143,19 @@ class AIAssistant:
         
         # Store staff links before cleaning
         staff_links = []
-        staff_link_pattern = r'a href="/staff/\d+" class="staff-link"[^/]+/a'
-        matches = re.finditer(staff_link_pattern, text)
-        for i, match in enumerate(matches):
-            staff_links.append(match.group(0))
-            text = text.replace(match.group(0), f'STAFFLINK_{i}_PLACEHOLDER')
+        seen_staff_ids = set()  # Track which staff IDs we've seen
+        staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">[^<]+</a>'
+        
+        # Find all staff links but only keep first occurrence for each staff ID
+        for match in re.finditer(staff_link_pattern, text):
+            staff_id = match.group(1)
+            if staff_id not in seen_staff_ids:
+                seen_staff_ids.add(staff_id)
+                staff_links.append(match.group(0))
+                text = text.replace(match.group(0), f'STAFFLINK_{len(staff_links)-1}_PLACEHOLDER')
+            else:
+                # Remove duplicate staff links
+                text = text.replace(match.group(0), '')
         
         # Clean up formatting but preserve staff link placeholders
         text = re.sub(r'(Question:|Answer:|Human:|Assistant:|</think>|First,|Initially,|Finally,|In conclusion,|Therefore,|So,|As a result,)', '', text)
@@ -158,13 +166,20 @@ class AIAssistant:
         for i, link in enumerate(staff_links):
             text = text.replace(f'STAFFLINK_{i}_PLACEHOLDER', link)
         
+        # After all other cleaning, remove duplicate sentences
+        sentences = text.split('.')
+        unique_sentences = []
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if sentence and sentence not in unique_sentences:
+                unique_sentences.append(sentence)
+        text = '. '.join(unique_sentences)
+        
         # Ensure response starts with expected patterns and remove duplicates
-        if "The most qualified person" in text:
-            parts = text.split("The most qualified person")
-            if len(parts) > 2:
-                text = "The most qualified person" + parts[1]
-            if not text.strip().startswith("The most qualified person"):
-                text = "The most qualified person" + text.split("The most qualified person")[1]
+        if "The best matched staff member" in text:
+            parts = text.split("The best matched staff member")
+            if len(parts) > 2:  # If there are multiple occurrences
+                text = "The best matched staff member" + parts[1]  # Keep only the first occurrence
         elif "Sorry, from my observation" in text:
             if not text.strip().startswith("Sorry, from my observation"):
                 text = "Sorry, from my observation" + text.split("Sorry, from my observation")[1]
