@@ -91,62 +91,68 @@ class AIAssistant:
             return try_model("mistral")
 
     def clean_response(self, text):
-        """Clean response while preserving relevant information but removing reasoning"""
-        
-        # First pass: Remove all think tags and their content
+        """
+        Clean the AI response to ensure:
+        - No internal reasoning or step-by-step analysis is present.
+        - No repeated expertise/skills.
+        - Only relevant staff are mentioned, using the required HTML format.
+        - Output is concise and directly answers the user query.
+        """
+        # Remove all <think>...</think> blocks
         text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
-        
-        # Extract content after FINAL_ANSWER: if present
-        final_answer_match = re.search(r'FINAL_ANSWER:(.*?)(?=$)', text, re.DOTALL)
+
+        # Extract content after FINAL_ANSWER:
+        final_answer_match = re.search(r'FINAL_ANSWER:(.*)', text, re.DOTALL)
         if final_answer_match:
             text = final_answer_match.group(1).strip()
-            
-        # Remove internal reasoning indicators but keep the information after them
-        reasoning_indicators = [
-            r'(?i)(?:okay,?\s+|alright,?\s+|let me|i will|looking at|based on|considering)',
-            r'(?i)(?:i see that|i notice that|i understand that|i can help|i checked)',
-            r'(?i)(?:here\'s what|after reviewing|thinking|analyzing)',
-            r'(?i)(?:first|initially|to answer this|from my analysis)',
-            r'(?i)the user is (?:asking|looking for|trying to find|wants to know)',
-            r'(?i)comparing the staff|among the available staff'
+        else:
+            # If FINAL_ANSWER not found, use the whole text (fallback)
+            text = text.strip()
+
+        # Remove any leftover reasoning phrases
+        reasoning_patterns = [
+            r'(?i)(okay|alright|let me|i will|looking at|based on|considering|i see that|i notice that|i understand that|i can help|i checked|here\'s what|after reviewing|thinking|analyzing|first|initially|to answer this|from my analysis|the user is (?:asking|looking for|trying to find|wants to know)|comparing the staff|among the available staff)[\s,:-]*'
         ]
-        
-        for indicator in reasoning_indicators:
-            # Replace reasoning indicator with empty string but keep content after it
-            text = re.sub(f'{indicator}\s*,?\s*', '', text, flags=re.IGNORECASE)
-            
-        # Extract and preserve key information
-        staff_link_pattern = r'<a href="/staff/\d+" class="staff-link">[^<]+</a>'
-        staff_link_match = re.search(staff_link_pattern, text)
-        expertise_pattern = r'(?:specialist|expert|experienced|skilled|specializes?) in ([^\.]+)'
-        expertise_match = re.search(expertise_pattern, text)
-        availability_pattern = r'(?:Available|Unavailable[^\.]*)'
-        availability_match = re.search(availability_pattern, text)
-        
-        if staff_link_match:
-            # Build response preserving key information
-            response_parts = []
-            response_parts.append(f"The best matched staff member is {staff_link_match.group(0)}")
-            
-            if expertise_match:
-                response_parts.append(f"who specializes in {expertise_match.group(1)}")
-                
-            # Look for additional relevant skills/information after removing reasoning
-            skills_match = re.search(r'(?:with expertise in|skilled in|proficient in|experienced in) ([^\.]+)', text)
-            if skills_match and skills_match.group(1) != expertise_match.group(1):
-                response_parts.append(f"with expertise in {skills_match.group(1)}")
-            
-            if availability_match:
-                response_parts.append(f"Status: {availability_match.group(0)}")
-            
-            text = ". ".join(response_parts) + "."
-            
-        # Final cleanup without removing content
-        text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
-        text = re.sub(r'\.{2,}', '.', text)  # Fix multiple periods
-        text = re.sub(r'\s*\.\s*', '. ', text)  # Normalize period spacing
-        
-        return text.strip()
+        for pattern in reasoning_patterns:
+            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+
+        # Remove duplicated skill/expertise phrases
+        text = re.sub(r'(with expertise in [^\.]+)\.?\s+\1', r'\1', text, flags=re.IGNORECASE)
+        text = re.sub(r'(who specializes in [^\.]+)\.?\s+\1', r'\1', text, flags=re.IGNORECASE)
+
+        # Only keep the first mention of "The best matched staff member is ..."
+        best_match_pattern = r'(The best matched staff member is [^\.]+\.)'
+        matches = re.findall(best_match_pattern, text)
+        if matches:
+            text = matches[0] + text.split(matches[0], 1)[-1]
+            # Remove any further duplicate "The best matched staff member is ..." phrases
+            text = re.sub(best_match_pattern, '', text, count=1)
+
+        # Remove any "_staff" or similar tokens
+        text = re.sub(r'_staff', '', text)
+
+        # Remove any remaining duplicated sentences (simple heuristic)
+        sentences = []
+        seen = set()
+        for s in re.split(r'(?<=\.)\s+', text):
+            s_clean = s.strip()
+            if s_clean and s_clean.lower() not in seen:
+                sentences.append(s_clean)
+                seen.add(s_clean.lower())
+        text = ' '.join(sentences)
+
+        # Remove any leftover HTML or markdown not matching staff link format
+        text = re.sub(r'<[^a][^>]*>', '', text)  # Remove all tags except <a ...>
+
+        # Normalize whitespace and periods
+        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r'\.{2,}', '.', text)
+        text = re.sub(r'\s*\.\s*', '. ', text)
+
+        # Final cleanup: remove any leading/trailing whitespace or periods
+        text = text.strip(' .')
+
+        return text + '.'
 
     def format_conversation_history(self):
         """Format the conversation history for inclusion in prompts"""
@@ -208,42 +214,44 @@ Here is our staff directory:
 
 RESPONSE GUIDELINES:
 
-- ALWAYS MENTION THE BEST MATCHED STAFF REGARDLESS OF THEIR AVAILABILITY STATUS
-- ONLY MENTION AN ALTERNATIVE IF THEY ARE AVAILABLE, AND THEIR ROLES OR SKILLS ARE RELATED TO THE USERS QUERY
-- IF BEST MATCHED STAFF MEMBER IS AVAILABLE, DO NOT MENTION ANY ALTERNATIVE STAFF MEMBERS ALONG WITH THEM
-- MUST NOT MENTION ANY MATCHED ALTERNATIVE STAFF MEMBERS IF THEY ARE UNAVAILABLE
-- THE MENTION OF BEST MATCHED STAFF IS NOT DEPENDANT ON AVAILABILITY
-- USE THE EXACT HTML FORMAT PROVIDED BELOW FOR STAFF LINKS
-- IN YOUR RESPONSE DO NOT INCLUDE YOUR THOUGHT PROCESS
-- KEEP YOUR RESPONSE CONCISE 
-- USERS MAY MAKE TYPOS SO TRY TO NORMALISE THE TEXT OF THE USER QUERY AS MUCH AS POSSIBLE
-- ONLY MENTION ALTENRATIVE STAFF MEMBER IF APPROPRIATE
-- ALTERNATIVE STAFF MEMBER MENTIONS (IF APPLICABLE) MUST BE LIMITED TO ONE
-- EXPLICITLY INCLUDE THE CURRENT AVAILABILITY [Status] OF EACH STAFF MEMBER YOU MENTION IN YOUR RESPONSE
-- IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
-- IMPORTANT: ENSURE YOUT RESPONSES CORRECTLY, ACCURATELY AND DIRECTLY ANSWERS THE USER QUERY BEFORE RETURNING A RESPONSE
-- IMPORTANT: FOR QUERIES RELATED TO ACADEMIC ACHIEVEMENTS, RESEARCH OR QUALIFICATIONS, YOU MUST THOROUGHLY CHECK THE STAFF MEMBERS [About] SECTION TO ENSURE ACCURACY as [About] is the field that acts as the 'about me' section for each staff members profile.
-- IMPORTANT: you must NOT simply make deciscions based on the intital information you see ragarding staff members, you MUST make a thotough check of ALL the information WITHIN the staff members profiles to ensure you are making the most accurate and correct decision possible.
-Important matching guidelines:
+### Staff Selection
+- Always mention the best matched staff member, regardless of their availability.
+- Only mention an alternative if they are available **and** their roles or skills are relevant to the user's query.
+- If the best matched staff member is available, do **not** mention any alternative staff members.
+- Do **not** mention unavailable alternative staff members.
+- Alternative staff member mentions (if applicable) must be limited to one.
+
+### Output Formatting
+- Use the exact HTML format for staff links: `<a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>`.
+- Explicitly include the current availability [Status] of each staff member you mention.
+- Do **not** include your thought process, greetings, or internal reasoning in the final output.
+- The final output must be a direct and concise answer to the user query.
+- Keep responses concise but mention relevant expertise, skills, roles, and other useful information.
+
+### Matching Process
 - Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x" relates to "domain x" which relates to "tool x" and staff x has this tool in his skillset therefore he is a match)
-- Look for both exact matches and semantically related skills in staff profiles
-- Consider the broader context of roles and how they relate to the requested expertise
-- ONLY mention an alternative if they are available and their skills or roles are related to the user query. when mentioning an alternative staff member, make sure to ONLY mention the skills of theirs that are MOST relevant to the user query. If their skills are not directly or strongly related to the user query, do not mention that staff member as an alternative at all.
-- The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
-- If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
-- Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
-- IMPORTANT: You MUST start with "<think>" followed by your reasoning process, then "</think>" BEFORE THE TEXT "FINAL_ANSWER:", which must then be followed by your final answer with no thinking or analysis.
-- IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
-- IMPORTANT: include the current availability status of each staff member you mention in your response.
-- IMPORTANT: you must NOT simply make deciscions based on the intital information you see ragarding staff members, you MUST make a thotough check of ALL the information WITHIN the staff members profiles to ensure you are making the most accurate and correct decision possible.
-- IMPORTANT: verify your response before returning it to ensure you are not making any mistakes or errors in your response.
-- THE WORDS "FINAL_ANSWER:" MUST APPEAR EXACTLY ONCE IN YOUR RESPONSE, AFTER ALL THINKING AND BEFORE THE ACTUAL ANSWER
-- 'THINKING' SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
-- ANALYSIS, REASONING AND STAFF COMPARISONS SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
-- FINAL OUTPUT MUST BE A DIRECT AND CONCISE ANSWER TO THE USER QUERY
-- IMPORTANT: AVAILABILITY STATUS UPDATES IN REAL TIME, SO MAKE SURE TO ALWAYS CHECK THE STATUS OF STAFF MEMBERS BEFORE RESPONDING
-- be concise in your responses but do mention expertises, skills, roles and any other relevant information that may be useful to the user. you MUST subsequet thurough checks of ALL details and ALL fields within ALL staff profiles before making your response to ensure accuracy and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links in every response where you mention staff member/s.
-- **ABSOLUTELY NO INTERNAL REASONING, GREETING, OR ANALYSIS SHOULD APPEAR IN THE FINAL OUTPUT, YOU MUST ONLY REASON IN THE BACKGROUND. ONLY THE FINAL, CONCISE ANSWER TO THE USER QUERY.**
+- Normalize user queries to account for typos.
+- For academic, research, or qualification queries, thoroughly check the staff member's [About] section for accuracy.
+- Do **not** make decisions based only on initial information; check all details and fields in all staff profiles.
+- Use both exact and semantically related skills/roles for matching.
+- If skills are mentioned, only include those most relevant to the user query.
+- Be consistent: similar queries should yield the same staff member.
+- The best match is the staff member with the most relevant combination of roles and skills.
+
+### Reasoning & Verification
+- All analysis, reasoning, and staff comparisons must be wrapped in `<think>...</think>` tags and **not** included in the final output.
+- The words `FINAL_ANSWER:` must appear exactly once, after all thinking and before the actual answer.
+- Verify your response before returning to ensure accuracy and correctness.
+
+### Real-Time Data
+- Always check the real-time availability status of staff members before responding.
+
+### Example output/response: format:
+- "The most quyalified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]."
+- Note: Format may change based on the query, but the structure should remain consistent. you MUST ALWAYS use <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> for staff links.
+**Summary:**  
+- Only the final, concise answer should be output.  
+- Absolutely no internal reasoning, greeting, or analysis should appear in the final output.
 
 Question: {user_query} [/INST]"""
 
@@ -289,38 +297,12 @@ Question: {user_query} [/INST]"""
                     else:
                         generated_text += chunk.get("generated_text", "")
 
-                # First clean via the clean_response method
                 cleaned_response = self.clean_response(generated_text)
-                
-                # Secondary safeguard: If internal reasoning is still visible
-                reasoning_indicators = [
-                    "let me", "i will", "looking at", "analyzing", "based on", "considering", 
-                    "first", "initially", "thinking", "let's see", "i see that", "i understand",
-                    "after reviewing", "here's what", "the user is asking", "okay, so the user"
-                ]
-                
-                if any(indicator in cleaned_response.lower() for indicator in reasoning_indicators):
-                    # Extract just the final answer if possible
-                    for pattern in ["The best matched staff member", "Sorry, from my observation"]:
-                        if pattern in cleaned_response:
-                            cleaned_response = pattern + cleaned_response.split(pattern, 1)[1]
-                            break
-                    
-                    # If we still have reasoning, make a more aggressive cleanup
-                    if any(indicator in cleaned_response.lower() for indicator in reasoning_indicators):
-                        # Find any staff links
-                        staff_link_match = re.search(r'<a href="/staff/\d+" class="staff-link">[^<]+</a>', cleaned_response)
-                        availability_match = re.search(r'(?:Available|Unavailable[^\.]*)', cleaned_response)
-                        
-                        if staff_link_match:
-                            staff_link = staff_link_match.group(0)
-                            availability = f". Status: {availability_match.group(0)}" if availability_match else ""
-                            cleaned_response = f"The best matched staff member is {staff_link}{availability}."
-                
+
                 # Always store in history for all request types
                 self.add_to_history(user_query, is_user=True)
                 self.add_to_history(cleaned_response, is_user=False)
-                
+
                 return cleaned_response
 
             except Exception as api_error:
