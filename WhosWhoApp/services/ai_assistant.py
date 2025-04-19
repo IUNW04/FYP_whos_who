@@ -51,7 +51,7 @@ class AIAssistant:
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.51,
+                "temperature": 0.3,
                 "max_new_tokens": 250,
                 "repetition_penalty": 1.1,
                 "timeout": 30
