@@ -87,6 +87,9 @@ class AIAssistant:
             return try_model("mistral")
 
     def clean_response(self, text):
+        # First remove everything between think tags (including the tags)
+        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        
         # Store staff links and verify names
         staff_links = []
         staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
