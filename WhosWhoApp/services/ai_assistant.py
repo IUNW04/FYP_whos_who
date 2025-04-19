@@ -2,6 +2,7 @@ import os
 import asyncio
 import concurrent.futures
 from huggingface_hub import InferenceClient
+from datetime import datetime
 
 from django.conf import settings
 from ..models import StaffProfile
@@ -40,6 +41,9 @@ class AIAssistant:
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=2, min=4, max=20))
     def _make_api_request(self, prompt):
+        # Force database to refresh staff data
+        StaffProfile.objects.all().select_for_update(skip_locked=True)
+        
         base_params = {
             "prompt": prompt,
             "stream": False,
@@ -237,20 +241,22 @@ Best regards,
         else:
             return f"""<s>[INST] {conversation_context}
 IMPORTANT: You MUST wrap ALL your analysis, greetings, and thinking process in "<think>" tags before providing your final answer.
-For example:
+YOU MUST FOLLOW THIS EXACT FORMAT:
 <think>
-Hello! I'm the Who's Who AI Staff Finder. How can I help you today?
-Analyzing the query...
-[Your analysis here]
+[PUT ALL YOUR THINKING HERE, INCLUDING:]
+- Initial greeting
+- Analysis of the query
+- Review of staff profiles
+- Reasoning about matches
+- ANY other thoughts or analysis
 </think>
-[Your final clean response here]
+
+[SINGLE CLEAN RESPONSE WITH NO ANALYSIS OR GREETING]
 
 Here is our staff directory:
 
 {staff_info}
 
-
-{staff_info}
 
 RESPONSE GUIDELINES:
 
@@ -278,7 +284,7 @@ Important matching guidelines:
 - The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
 - If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
-IMPORTANT: You MUST  "<think>" followed by your reasoning process, then "</think>" before providing your final answer.your final output however must not include the <think> tags or your thought process.
+- IMPORTANT: You MUST  "<think>" followed by your reasoning process, then "</think>" before providing your final answer.your final output however must not include the <think> tags or your thought process.
 - IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 - IMPORTANT: include the current availability status of each staff member you mention in your response.
 - IMPORTANT: you must NOT simply make deciscions based on the intital information you see ragarding staff members, you MUST make a thotough check of ALL the information WITHIN the staff members profiles to ensure you are making the most accurate and correct decision possible.
@@ -286,6 +292,7 @@ IMPORTANT: You MUST  "<think>" followed by your reasoning process, then "</think
 - 'THINKING' SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
 - ANALYSIS, REASONING AND STAFF COMPARISONS SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
 - FINAL OUTPUT MUST BE A DIRECT AND CONCISE ANSWER TO THE USER QUERY
+- IMPORTANT: AVAILABILITY STATUS UPDATES IN REAL TIME, SO MAKE SURE TO ALWAYS CHECK THE STATUS OF STAFF MEMBERS BEFORE RESPONDING
 - be concise in your responses, make subsequet thurough checks of ALL details and ALL fields within ALL staff profiles before making your response to ensure accuracy and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links in every response where you mention staff member/s.
 
 Question: {user_query} [/INST]"""
@@ -295,7 +302,8 @@ Question: {user_query} [/INST]"""
             return "AI assistant is currently unavailable. Please contact the administrator to set up the Hugging Face API token."
 
         try:
-            all_staff = StaffProfile.objects.all()
+            # Force fresh query of staff data
+            all_staff = StaffProfile.objects.all().select_for_update(skip_locked=True)
             staff_info = "\n".join([
                 f"Staff Member: {staff.name}"
                 f"\nPrimary Role: {staff.role}"
@@ -318,8 +326,9 @@ Question: {user_query} [/INST]"""
 
             logging.debug(f"User Query: {user_query}, Detected Email Request: {is_email_request}")
 
-            recent_context = None  # Remove context for non-email requests
-            prompt = self.generate_prompt(user_query, staff_info, recent_context, is_email_request)
+            # Add timestamp to force unique prompts
+            timestamp = datetime.now().isoformat()
+            prompt = self.generate_prompt(f"{user_query} [Timestamp: {timestamp}]", staff_info, None, is_email_request)
 
             try:
                 response = self._make_api_request(prompt)
