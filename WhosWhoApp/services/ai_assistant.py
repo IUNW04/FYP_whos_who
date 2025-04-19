@@ -121,11 +121,11 @@ class AIAssistant:
             r'Let me explain:.*?(?=The most qualified person|Sorry, from my observation|$)',
             r'\d+\.\s+.*?(?=The most qualified person|Sorry, from my observation|$)',  # Numbered explanations
             r'\*\*.*?\*\*',  # Remove markdown bold text often used in explanations
-            r'Alright,.*?(?=\w+\s+has|$)',
-            r'Okay, let\'s figure out.*?(?=\w+\s+has|$)',
-            r'Looking at the list:.*?(?=\w+\s+has|$)',
-            r'I\'ll go through.*?(?=\w+\s+has|$)',
-            r'Looking at the provided staff directory.*?(?=\w+\s+has|$)'
+            r'Alright,.*?(?=\w+\s+has|$)',                                    # New pattern
+            r'Okay, let\'s figure out.*?(?=\w+\s+has|$)',                    # New pattern
+            r'Looking at the list:.*?(?=\w+\s+has|$)',                       # New pattern
+            r'I\'ll go through.*?(?=\w+\s+has|$)',                          # New pattern
+            r'Looking at the provided staff directory.*?(?=\w+\s+has|$)'     # New pattern
         ] + [
             f'{starter}.*?(?=The most qualified person|Sorry, from my observation|$)'
             for starter in [
