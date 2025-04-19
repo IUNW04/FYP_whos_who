@@ -54,7 +54,7 @@ class AIAssistant:
                 "temperature": 0.6,
                 "max_new_tokens": 150,
                 "repetition_penalty": 1.1,
-                "timeout": 45
+                "timeout": 30
             },
             "mistral": {
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
@@ -87,26 +87,84 @@ class AIAssistant:
             return try_model("mistral")
 
     def clean_response(self, text):
-        # Add validation for staff links format
+        # Store staff links and verify names
+        staff_links = []
         staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
         
-        # Ensure response follows expected format
-        if not re.search(staff_link_pattern, text):
-            return "I couldn't find any matching staff members for your query. Please try rephrasing your question."
+        def get_correct_name(staff_id):
+            try:
+                staff = StaffProfile.objects.get(id=staff_id)
+                return staff.name
+            except StaffProfile.DoesNotExist:
+                return '[Unknown Staff]'
         
-        # Remove duplicate responses
-        seen_staff_ids = set()
-        cleaned_links = []
-        for match in re.finditer(staff_link_pattern, text):
+        # Convert markdown-style links to proper HTML staff links
+        markdown_link_pattern = r'\[([^\]]+)\]\(\/staff\/(\d+)\)'
+        text = re.sub(markdown_link_pattern, 
+                     r'<a href="/staff/\2" class="staff-link">\1</a>', 
+                     text)
+        
+        # Replace any mismatched names in staff links
+        def replace_with_correct_name(match):
             staff_id = match.group(1)
-            if staff_id not in seen_staff_ids:
-                seen_staff_ids.add(staff_id)
-                cleaned_links.append(match.group(0))
+            correct_name = get_correct_name(staff_id)
+            return f'<a href="/staff/{staff_id}" class="staff-link">{correct_name}</a>'
         
-        # Reconstruct response with unique staff mentions
-        cleaned_text = " ".join(cleaned_links)
+        text = re.sub(staff_link_pattern, replace_with_correct_name, text)
         
-        return cleaned_text.strip()
+        # Expanded list of patterns to remove explanations and thinking
+        explanation_patterns = [
+            r'Step-by-step explanation:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Understanding the Query:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Here\'s why:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Analysis:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Let me explain:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'\d+\.\s+.*?(?=The most qualified person|Sorry, from my observation|$)',  # Numbered explanations
+            r'\*\*.*?\*\*',  # Remove markdown bold text often used in explanations
+        ] + [
+            f'{starter}.*?(?=The most qualified person|Sorry, from my observation|$)'
+            for starter in [
+                '<think>', 'Thinking:', 'Let me analyze', 'Let me see',
+                'Let me check', 'Let me look', 'Let me find', 'Let me help',
+                'First I need to', 'First, I need to', 'I need to',
+                'I will first', 'I will check', 'I will look', 'I will search',
+                'I will find', 'To answer this', 'Let\'s look at', 'Let\'s see',
+            ]
+        ]
+        
+        # Apply all patterns
+        for pattern in explanation_patterns:
+            text = re.sub(pattern, '', text, flags=re.DOTALL | re.IGNORECASE)
+        
+        # Store staff links before cleaning
+        staff_links = []
+        staff_link_pattern = r'a href="/staff/\d+" class="staff-link"[^/]+/a'
+        matches = re.finditer(staff_link_pattern, text)
+        for i, match in enumerate(matches):
+            staff_links.append(match.group(0))
+            text = text.replace(match.group(0), f'STAFFLINK_{i}_PLACEHOLDER')
+        
+        # Clean up formatting but preserve staff link placeholders
+        text = re.sub(r'(Question:|Answer:|Human:|Assistant:|</think>|First,|Initially,|Finally,|In conclusion,|Therefore,|So,|As a result,)', '', text)
+        text = re.sub(r'\n+', ' ', text)
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Restore staff links
+        for i, link in enumerate(staff_links):
+            text = text.replace(f'STAFFLINK_{i}_PLACEHOLDER', link)
+        
+        # Ensure response starts with expected patterns and remove duplicates
+        if "The most qualified person" in text:
+            parts = text.split("The most qualified person")
+            if len(parts) > 2:
+                text = "The most qualified person" + parts[1]
+            if not text.strip().startswith("The most qualified person"):
+                text = "The most qualified person" + text.split("The most qualified person")[1]
+        elif "Sorry, from my observation" in text:
+            if not text.strip().startswith("Sorry, from my observation"):
+                text = "Sorry, from my observation" + text.split("Sorry, from my observation")[1]
+        
+        return text.strip()
 
     def format_conversation_history(self):
         """Format the conversation history for inclusion in prompts"""
@@ -182,6 +240,7 @@ IMPORTANT: You MUST  "<think>" followed by your reasoning process, then "</think
 - IMPORTANT: include the current availability status of each staff member you mention in your response.
 - IMPORTANT: you must NOT simply make deciscions based on the intital information you see ragarding staff members, you MUST make a thotough check of ALL the information WITHIN the staff members profiles to ensure you are making the most accurate and correct decision possible.
 - IMPORTANT: verify your response before returning it to ensure you are not making any mistakes or errors in your response.
+- 'THINKING' SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
 - be concise in your responses but dont be to brief, make subsequet thurough checks of ALL details and ALL fields within ALL staff profiles before making your response to ensure accuracy and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links in every response where you mention staff member/s.
 
 Question: {user_query} [/INST]"""
@@ -225,9 +284,6 @@ Question: {user_query} [/INST]"""
                         generated_text += chunk
                     else:
                         generated_text += chunk.get("generated_text", "")
-
-                # Remove thinking process section
-                generated_text = re.sub(r'<think>.*?</think>', '', generated_text, flags=re.DOTALL)
 
                 cleaned_response = self.clean_response(generated_text)
                 
