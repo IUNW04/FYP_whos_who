@@ -52,7 +52,7 @@ class AIAssistant:
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
                 "temperature": 0.6,
-                "max_new_tokens": 150,
+                "max_new_tokens": 250,
                 "repetition_penalty": 1.1,
                 "timeout": 30
             },
