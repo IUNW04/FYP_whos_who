@@ -239,6 +239,7 @@ Important matching guidelines:
 - IMPORTANT: include the current availability status of each staff member you mention in your response.
 - IMPORTANT: you must NOT simply make deciscions based on the intital information you see ragarding staff members, you MUST make a thotough check of ALL the information WITHIN the staff members profiles to ensure you are making the most accurate and correct decision possible.
 - IMPORTANT: verify your response before returning it to ensure you are not making any mistakes or errors in your response.
+- IMPORTANT: proofread your response before returning it to ensure you are not repeating yourslef in the same response or making any mistakes or errors in your response.
 - be concise in your responses but dont be to brief, make subsequet thurough checks of ALL details and ALL fields within ALL staff profiles before making your response to ensure accuracy and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links in every response where you mention staff member/s.
 
 Question: {user_query} [/INST]"""
