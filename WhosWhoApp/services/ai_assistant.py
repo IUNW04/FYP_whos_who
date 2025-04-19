@@ -226,6 +226,7 @@ RESPONSE GUIDELINES:
 - IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 - IMPORTANT: ENSURE YOUT RESPONSES CORRECTLY, ACCURATELY AND DIRECTLY ANSWERS THE USER QUERY BEFORE RETURNING A RESPONSE
 - IMPORTANT: FOR QUERIES RELATED TO ACADEMIC ACHIEVEMENTS, RESEARCH OR QUALIFICATIONS, YOU MUST THOROUGHLY CHECK THE STAFF MEMBERS [About] SECTION TO ENSURE ACCURACY as [About] is the field that acts as the 'about me' section for each staff members profile.
+- IMPORTANT: FOR QUERIES WHERE THERE ARE NO MATCHED STAFF MEMBERS, TELL THE USER THAT THERE ARE NO MATCHED STAFF MEMBERS FOR THEIR QUERY AND DO NOT SUGGEST OR MENTION ANY STAFF MEMBERS AND IF APPROPRIATE SUGGEST THE USER TO CONTACT STUDENT CENTER OR THE ADMINISTRATOR FOR FURTHER ASSISTANCE
 
 Important matching guidelines:
 - Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x" relates to "domain x" which relates to "tool x" and staff x has this tool in his skillset therefore he is a match)
@@ -256,6 +257,8 @@ Question: {user_query} [/INST]"""
                 f"\nAbout: {staff.about_me or 'Not specified'}"
                 f"\nStatus: {self.get_availability_status(staff)}"
                 f"\nEmail: {staff.email}"
+                f"\nLocation: {staff.location or 'Not specified'}"
+                f"\nPhone: {staff.phone or 'Not specified'}"
                 f"\nID: {staff.id}\n"
                 for staff in all_staff
             ])
