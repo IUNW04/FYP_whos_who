@@ -114,20 +114,22 @@ class AIAssistant:
         
         # Expanded list of patterns to remove explanations and thinking
         explanation_patterns = [
-            r'Step-by-step explanation:.*?(?=The most qualified person|Sorry, from my observation|$)',
-            r'Understanding the Query:.*?(?=The most qualified person|Sorry, from my observation|$)',
-            r'Here\'s why:.*?(?=The most qualified person|Sorry, from my observation|$)',
-            r'Analysis:.*?(?=The most qualified person|Sorry, from my observation|$)',
-            r'Let me explain:.*?(?=The most qualified person|Sorry, from my observation|$)',
-            r'\d+\.\s+.*?(?=The most qualified person|Sorry, from my observation|$)',  # Numbered explanations
+            r'Hello! I\'m the Who\'s Who AI Staff Finder\. How can I help you today\?',  # Remove greeting
+            r'<think>.*?</think>',  # Remove everything between think tags
+            r'Step-by-step explanation:.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'Understanding the Query:.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'Here\'s why:.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'Analysis:.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'Let me explain:.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'\d+\.\s+.*?(?=The best matched staff member|Sorry, from my observation|$)',  # Numbered explanations
             r'\*\*.*?\*\*',  # Remove markdown bold text often used in explanations
-            r'Alright,.*?(?=\w+\s+has|$)',                                    # New pattern
-            r'Okay, let\'s figure out.*?(?=\w+\s+has|$)',                    # New pattern
-            r'Looking at the list:.*?(?=\w+\s+has|$)',                       # New pattern
-            r'I\'ll go through.*?(?=\w+\s+has|$)',                          # New pattern
-            r'Looking at the provided staff directory.*?(?=\w+\s+has|$)'     # New pattern
+            r'Alright,.*?(?=\w+\s+has|$)',                                    
+            r'Okay, let\'s figure out.*?(?=\w+\s+has|$)',                    
+            r'Looking at the list:.*?(?=\w+\s+has|$)',                       
+            r'I\'ll go through.*?(?=\w+\s+has|$)',                          
+            r'Looking at the provided staff directory.*?(?=\w+\s+has|$)'     
         ] + [
-            f'{starter}.*?(?=The most qualified person|Sorry, from my observation|$)'
+            f'{starter}.*?(?=The best matched staff member|Sorry, from my observation|$)'
             for starter in [
                 '<think>', 'Thinking:', 'Let me analyze', 'Let me see',
                 'Let me check', 'Let me look', 'Let me find', 'Let me help',
