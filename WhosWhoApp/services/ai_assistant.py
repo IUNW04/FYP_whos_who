@@ -294,7 +294,7 @@ Important matching guidelines:
 - ANALYSIS, REASONING AND STAFF COMPARISONS SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
 - FINAL OUTPUT MUST BE A DIRECT AND CONCISE ANSWER TO THE USER QUERY
 - IMPORTANT: AVAILABILITY STATUS UPDATES IN REAL TIME, SO MAKE SURE TO ALWAYS CHECK THE STATUS OF STAFF MEMBERS BEFORE RESPONDING
-- be concise in your responses, make subsequet thurough checks of ALL details and ALL fields within ALL staff profiles before making your response to ensure accuracy and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links in every response where you mention staff member/s.
+- be concise in your responses but do mention expertises, skills, roles and any other relevant information that may be useful to the user. you MUST subsequet thurough checks of ALL details and ALL fields within ALL staff profiles before making your response to ensure accuracy and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links in every response where you mention staff member/s.
 - **ABSOLUTELY NO INTERNAL REASONING, GREETING, OR ANALYSIS SHOULD APPEAR IN THE FINAL OUTPUT, YOU MUST ONLY REASON IN THE BACKGROUND. ONLY THE FINAL, CONCISE ANSWER TO THE USER QUERY.**
 
 Question: {user_query} [/INST]"""
