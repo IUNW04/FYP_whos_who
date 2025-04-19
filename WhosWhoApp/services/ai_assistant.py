@@ -54,7 +54,7 @@ class AIAssistant:
                 "temperature": 0.6,
                 "max_new_tokens": 150,
                 "repetition_penalty": 1.1,
-                "timeout": 30
+                "timeout": 45
             },
             "mistral": {
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
