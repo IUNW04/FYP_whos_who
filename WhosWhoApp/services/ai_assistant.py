@@ -241,7 +241,8 @@ IMPORTANT: You MUST  "<think>" followed by your reasoning process, then "</think
 - IMPORTANT: you must NOT simply make deciscions based on the intital information you see ragarding staff members, you MUST make a thotough check of ALL the information WITHIN the staff members profiles to ensure you are making the most accurate and correct decision possible.
 - IMPORTANT: verify your response before returning it to ensure you are not making any mistakes or errors in your response.
 - 'THINKING' SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
-- FINAL OUTPUT MUST BE A DIRECT AND CONCISEANSWER TO THE USER QUERY
+- ANALYSIS, REASONING AND STAFF COMPARISONS SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
+- FINAL OUTPUT MUST BE A DIRECT AND CONCISE ANSWER TO THE USER QUERY
 - be concise in your responses, make subsequet thurough checks of ALL details and ALL fields within ALL staff profiles before making your response to ensure accuracy and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links in every response where you mention staff member/s.
 
 Question: {user_query} [/INST]"""
