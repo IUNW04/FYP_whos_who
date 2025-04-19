@@ -51,7 +51,7 @@ class AIAssistant:
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.53,
+                "temperature": 0.6,
                 "max_new_tokens": 250,
                 "repetition_penalty": 1.1,
                 "timeout": 30
@@ -87,8 +87,14 @@ class AIAssistant:
             return try_model("mistral")
 
     def clean_response(self, text):
-        # First remove everything between think tags (including the tags)
+        # Remove the greeting
+        text = re.sub(r'Hello! I\'m the Who\'s Who AI Staff Finder\. How can I help you today\?', '', text)
+        
+        # Remove everything between think tags (including the tags)
         text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        
+        # Remove any "Okay, let's tackle this question" type phrases
+        text = re.sub(r'Okay, let\'s tackle this question:.*?\n', '', text)
         
         # Store staff links and verify names
         staff_links = []
@@ -230,7 +236,19 @@ Best regards,
 [/INST]"""
         else:
             return f"""<s>[INST] {conversation_context}
+IMPORTANT: You MUST wrap ALL your analysis, greetings, and thinking process in "<think>" tags before providing your final answer.
+For example:
+<think>
+Hello! I'm the Who's Who AI Staff Finder. How can I help you today?
+Analyzing the query...
+[Your analysis here]
+</think>
+[Your final clean response here]
+
 Here is our staff directory:
+
+{staff_info}
+
 
 {staff_info}
 
