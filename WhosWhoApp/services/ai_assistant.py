@@ -51,10 +51,10 @@ class AIAssistant:
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.3,
+                "temperature": 0.6,
                 "max_new_tokens": 150,
                 "repetition_penalty": 1.1,
-                "timeout": 20
+                "timeout": 30
             },
             "mistral": {
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
@@ -235,6 +235,7 @@ Important matching guidelines:
 - The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
 - If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
+IMPORTANT: You MUST  "<think>" followed by your reasoning process, then "</think>" before providing your final answer.your final output however must not include the <think> tags or your thought process.
 - IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 - IMPORTANT: include the current availability status of each staff member you mention in your response.
 - IMPORTANT: you must NOT simply make deciscions based on the intital information you see ragarding staff members, you MUST make a thotough check of ALL the information WITHIN the staff members profiles to ensure you are making the most accurate and correct decision possible.
