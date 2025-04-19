@@ -91,6 +91,31 @@ class AIAssistant:
             return try_model("mistral")
 
     def clean_response(self, text):
+        # First pass: Remove all thinking/reasoning sections
+        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        
+        # Remove reasoning keywords and their following text
+        reasoning_patterns = [
+            r'(?i)(?:okay|alright|let me|i will|looking at|analyzing|based on|considering|first|initially|to answer this|from my analysis).*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'(?i)(?:i see that|i notice that|i understand that|i can help|i checked|after reviewing).*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'(?i)here\'s (?:what|why|how).*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'(?i)(?:step|steps).*?(?=The best matched staff member|Sorry, from my observation|$)',
+        ]
+        
+        for pattern in reasoning_patterns:
+            text = re.sub(pattern, '', text)
+        
+        # Force response to start with standard patterns
+        if not any(text.strip().startswith(start) for start in ['The best matched staff member', 'Sorry, from my observation']):
+            # Extract the staff link and rebuild the response
+            staff_link_match = re.search(r'<a href="/staff/\d+" class="staff-link">[^<]+</a>', text)
+            if staff_link_match:
+                text = f"The best matched staff member is {staff_link_match.group(0)}"
+                # Extract availability if present
+                availability_match = re.search(r'(?:Available|Unavailable[^\.]*)', text)
+                if availability_match:
+                    text += f". Status: {availability_match.group(0)}"
+        
         # Remove the greeting
         text = re.sub(r'Hello! I\'m the Who\'s Who AI Staff Finder\. How can I help you today\?', '', text)
         
@@ -294,6 +319,7 @@ Important matching guidelines:
 - FINAL OUTPUT MUST BE A DIRECT AND CONCISE ANSWER TO THE USER QUERY
 - IMPORTANT: AVAILABILITY STATUS UPDATES IN REAL TIME, SO MAKE SURE TO ALWAYS CHECK THE STATUS OF STAFF MEMBERS BEFORE RESPONDING
 - be concise in your responses, make subsequet thurough checks of ALL details and ALL fields within ALL staff profiles before making your response to ensure accuracy and make sure you use use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> format for staff links in every response where you mention staff member/s.
+- **ABSOLUTELY NO INTERNAL REASONING, GREETING, OR ANALYSIS SHOULD APPEAR IN THE FINAL OUTPUT, YOU MUST ONLY REASON IN THE BACKGROUND. ONLY THE FINAL, CONCISE ANSWER TO THE USER QUERY.**
 
 Question: {user_query} [/INST]"""
 
