@@ -91,112 +91,60 @@ class AIAssistant:
             return try_model("mistral")
 
     def clean_response(self, text):
-        """Thoroughly clean AI responses to remove all reasoning and thinking text"""
+        """Clean response while preserving relevant information but removing reasoning"""
         
-        # First, aggressively remove all think tags and their content
+        # First pass: Remove all think tags and their content
         text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
         
         # Extract content after FINAL_ANSWER: if present
         final_answer_match = re.search(r'FINAL_ANSWER:(.*?)(?=$)', text, re.DOTALL)
         if final_answer_match:
             text = final_answer_match.group(1).strip()
-        
-        # If the response doesn't start with our expected format, extract the relevant parts
-        expected_starts = ["The best matched staff member", "Sorry, from my observation"]
-        if not any(text.strip().startswith(start) for start in expected_starts):
-            # Look for the standard responses anywhere in the text
-            for pattern in expected_starts:
-                if pattern in text:
-                    # Extract everything from this pattern to the end and use that
-                    text = pattern + text.split(pattern, 1)[1]
-                    break
-        
-        # Handle cases where no expected pattern is found but there are staff links
-        if not any(pattern in text for pattern in expected_starts):
-            staff_link_match = re.search(r'<a href="/staff/\d+" class="staff-link">[^<]+</a>', text)
-            if staff_link_match:
-                # Extract the staff information and rebuild in standard format
-                staff_link = staff_link_match.group(0)
-                availability_match = re.search(r'(?:Available|Unavailable[^\.]*)', text)
-                availability = f". Status: {availability_match.group(0)}" if availability_match else ""
-                text = f"The best matched staff member is {staff_link}{availability}."
-        
-        # Comprehensive list of reasoning starter phrases to remove along with their content
-        reasoning_patterns = [
-            # General analysis indicators
-            r'(?i)(?:okay|alright|let me|i will|looking at|analyzing|based on|considering|first|initially).*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'(?i)(?:i see that|i notice that|i understand that|i can help|i checked|after reviewing).*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'(?i)here\'s (?:what|why|how).*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'(?i)(?:step|steps).*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'(?i)to answer this.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'(?i)from my analysis.*?(?=The best matched staff member|Sorry, from my observation|$)',
             
-            # Question parsing indicators
-            r'(?i)the user is (?:asking|looking for|trying to find|wants to know).*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'(?i)this query is about.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            
-            # Staff comparison indicators
-            r'(?i)comparing the staff.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'(?i)looking at the profiles.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'(?i)among the available staff.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            
-            # More direct thinking/reasoning extraction patterns
-            r'Thinking:.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'Let me analyze.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'First, I need to.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'I will check.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'Let\'s see.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            
-            # Remove greetings
-            r'Hello! I\'m the Who\'s Who AI Staff Finder\. How can I help you today\?',
+        # Remove internal reasoning indicators but keep the information after them
+        reasoning_indicators = [
+            r'(?i)(?:okay,?\s+|alright,?\s+|let me|i will|looking at|based on|considering)',
+            r'(?i)(?:i see that|i notice that|i understand that|i can help|i checked)',
+            r'(?i)(?:here\'s what|after reviewing|thinking|analyzing)',
+            r'(?i)(?:first|initially|to answer this|from my analysis)',
+            r'(?i)the user is (?:asking|looking for|trying to find|wants to know)',
+            r'(?i)comparing the staff|among the available staff'
         ]
         
-        # Apply all reasoning patterns
-        for pattern in reasoning_patterns:
-            text = re.sub(pattern, '', text, flags=re.DOTALL)
-        
-        # Remove any numbered or bullet-pointed reasoning
-        text = re.sub(r'\d+\.\s+.*?(?=The best matched staff member|Sorry, from my observation|$)', '', text, flags=re.DOTALL)
-        text = re.sub(r'\*\s+.*?(?=The best matched staff member|Sorry, from my observation|$)', '', text, flags=re.DOTALL)
-        
-        # Preserve staff links
-        staff_links = []
-        seen_staff_ids = set()
-        staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
-        
-        # Process staff links
-        for match in re.finditer(staff_link_pattern, text):
-            staff_id = match.group(1)
-            if staff_id not in seen_staff_ids:
-                seen_staff_ids.add(staff_id)
-                staff_links.append(match.group(0))
-                text = text.replace(match.group(0), f'STAFFLINK_{len(staff_links)-1}_PLACEHOLDER')
-        
-        # Final cleanup of formatting
-        text = re.sub(r'\n+', ' ', text)
-        text = re.sub(r'\s+', ' ', text)
-        
-        # Restore staff links
-        for i, link in enumerate(staff_links):
-            text = text.replace(f'STAFFLINK_{i}_PLACEHOLDER', link)
-        
-        # Remove duplicate sentences
-        sentences = text.split('.')
-        unique_sentences = []
-        seen_sentences = set()
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if sentence and sentence.lower() not in seen_sentences:
-                unique_sentences.append(sentence)
-                seen_sentences.add(sentence.lower())
-        
-        text = '. '.join(unique_sentences)
-        if text and not text.endswith('.'):
-            text += '.'
+        for indicator in reasoning_indicators:
+            # Replace reasoning indicator with empty string but keep content after it
+            text = re.sub(f'{indicator}\s*,?\s*', '', text, flags=re.IGNORECASE)
             
-        # Final safety check: If we've mangled the response too much, return a simple fallback
-        if len(text.strip()) < 10 and staff_links:
-            text = f"The best matched staff member is {staff_links[0]}."
+        # Extract and preserve key information
+        staff_link_pattern = r'<a href="/staff/\d+" class="staff-link">[^<]+</a>'
+        staff_link_match = re.search(staff_link_pattern, text)
+        expertise_pattern = r'(?:specialist|expert|experienced|skilled|specializes?) in ([^\.]+)'
+        expertise_match = re.search(expertise_pattern, text)
+        availability_pattern = r'(?:Available|Unavailable[^\.]*)'
+        availability_match = re.search(availability_pattern, text)
+        
+        if staff_link_match:
+            # Build response preserving key information
+            response_parts = []
+            response_parts.append(f"The best matched staff member is {staff_link_match.group(0)}")
+            
+            if expertise_match:
+                response_parts.append(f"who specializes in {expertise_match.group(1)}")
+                
+            # Look for additional relevant skills/information after removing reasoning
+            skills_match = re.search(r'(?:with expertise in|skilled in|proficient in|experienced in) ([^\.]+)', text)
+            if skills_match and skills_match.group(1) != expertise_match.group(1):
+                response_parts.append(f"with expertise in {skills_match.group(1)}")
+            
+            if availability_match:
+                response_parts.append(f"Status: {availability_match.group(0)}")
+            
+            text = ". ".join(response_parts) + "."
+            
+        # Final cleanup without removing content
+        text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
+        text = re.sub(r'\.{2,}', '.', text)  # Fix multiple periods
+        text = re.sub(r'\s*\.\s*', '. ', text)  # Normalize period spacing
         
         return text.strip()
 
