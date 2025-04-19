@@ -91,114 +91,88 @@ class AIAssistant:
             return try_model("mistral")
 
     def clean_response(self, text):
-        # First pass: Remove all thinking/reasoning sections
+        """Thoroughly clean AI responses to remove all reasoning and thinking text"""
+        
+        # First, aggressively remove all think tags and their content
         text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
         
-        # Remove reasoning keywords and their following text
+        # Extract content after FINAL_ANSWER: if present
+        final_answer_match = re.search(r'FINAL_ANSWER:(.*?)(?=$)', text, re.DOTALL)
+        if final_answer_match:
+            text = final_answer_match.group(1).strip()
+        
+        # If the response doesn't start with our expected format, extract the relevant parts
+        expected_starts = ["The best matched staff member", "Sorry, from my observation"]
+        if not any(text.strip().startswith(start) for start in expected_starts):
+            # Look for the standard responses anywhere in the text
+            for pattern in expected_starts:
+                if pattern in text:
+                    # Extract everything from this pattern to the end and use that
+                    text = pattern + text.split(pattern, 1)[1]
+                    break
+        
+        # Handle cases where no expected pattern is found but there are staff links
+        if not any(pattern in text for pattern in expected_starts):
+            staff_link_match = re.search(r'<a href="/staff/\d+" class="staff-link">[^<]+</a>', text)
+            if staff_link_match:
+                # Extract the staff information and rebuild in standard format
+                staff_link = staff_link_match.group(0)
+                availability_match = re.search(r'(?:Available|Unavailable[^\.]*)', text)
+                availability = f". Status: {availability_match.group(0)}" if availability_match else ""
+                text = f"The best matched staff member is {staff_link}{availability}."
+        
+        # Comprehensive list of reasoning starter phrases to remove along with their content
         reasoning_patterns = [
-            r'(?i)(?:okay|alright|let me|i will|looking at|analyzing|based on|considering|first|initially|to answer this|from my analysis).*?(?=The best matched staff member|Sorry, from my observation|$)',
+            # General analysis indicators
+            r'(?i)(?:okay|alright|let me|i will|looking at|analyzing|based on|considering|first|initially).*?(?=The best matched staff member|Sorry, from my observation|$)',
             r'(?i)(?:i see that|i notice that|i understand that|i can help|i checked|after reviewing).*?(?=The best matched staff member|Sorry, from my observation|$)',
             r'(?i)here\'s (?:what|why|how).*?(?=The best matched staff member|Sorry, from my observation|$)',
             r'(?i)(?:step|steps).*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'(?i)to answer this.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'(?i)from my analysis.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            
+            # Question parsing indicators
+            r'(?i)the user is (?:asking|looking for|trying to find|wants to know).*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'(?i)this query is about.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            
+            # Staff comparison indicators
+            r'(?i)comparing the staff.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'(?i)looking at the profiles.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'(?i)among the available staff.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            
+            # More direct thinking/reasoning extraction patterns
+            r'Thinking:.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'Let me analyze.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'First, I need to.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'I will check.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            r'Let\'s see.*?(?=The best matched staff member|Sorry, from my observation|$)',
+            
+            # Remove greetings
+            r'Hello! I\'m the Who\'s Who AI Staff Finder\. How can I help you today\?',
         ]
         
+        # Apply all reasoning patterns
         for pattern in reasoning_patterns:
-            text = re.sub(pattern, '', text)
+            text = re.sub(pattern, '', text, flags=re.DOTALL)
         
-        # Force response to start with standard patterns
-        if not any(text.strip().startswith(start) for start in ['The best matched staff member', 'Sorry, from my observation']):
-            # Extract the staff link and rebuild the response
-            staff_link_match = re.search(r'<a href="/staff/\d+" class="staff-link">[^<]+</a>', text)
-            if staff_link_match:
-                text = f"The best matched staff member is {staff_link_match.group(0)}"
-                # Extract availability if present
-                availability_match = re.search(r'(?:Available|Unavailable[^\.]*)', text)
-                if availability_match:
-                    text += f". Status: {availability_match.group(0)}"
+        # Remove any numbered or bullet-pointed reasoning
+        text = re.sub(r'\d+\.\s+.*?(?=The best matched staff member|Sorry, from my observation|$)', '', text, flags=re.DOTALL)
+        text = re.sub(r'\*\s+.*?(?=The best matched staff member|Sorry, from my observation|$)', '', text, flags=re.DOTALL)
         
-        # Remove the greeting
-        text = re.sub(r'Hello! I\'m the Who\'s Who AI Staff Finder\. How can I help you today\?', '', text)
-        
-        # Remove everything between think tags (including the tags)
-        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
-        
-        # Remove any "Okay, let's tackle this question" type phrases
-        text = re.sub(r'Okay, let\'s tackle this question:.*?\n', '', text)
-        
-        # Store staff links and verify names
+        # Preserve staff links
         staff_links = []
+        seen_staff_ids = set()
         staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
         
-        def get_correct_name(staff_id):
-            try:
-                staff = StaffProfile.objects.get(id=staff_id)
-                return staff.name
-            except StaffProfile.DoesNotExist:
-                return '[Unknown Staff]'
-        
-        # Convert markdown-style links to proper HTML staff links
-        markdown_link_pattern = r'\[([^\]]+)\]\(\/staff\/(\d+)\)'
-        text = re.sub(markdown_link_pattern, 
-                     r'<a href="/staff/\2" class="staff-link">\1</a>', 
-                     text)
-        
-        # Replace any mismatched names in staff links
-        def replace_with_correct_name(match):
-            staff_id = match.group(1)
-            correct_name = get_correct_name(staff_id)
-            return f'<a href="/staff/{staff_id}" class="staff-link">{correct_name}</a>'
-        
-        text = re.sub(staff_link_pattern, replace_with_correct_name, text)
-        
-        # Expanded list of patterns to remove explanations and thinking
-        explanation_patterns = [
-            r'Hello! I\'m the Who\'s Who AI Staff Finder\. How can I help you today\?',  # Remove greeting
-            r'<think>.*?</think>',  # Remove everything between think tags
-            r'Step-by-step explanation:.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'Understanding the Query:.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'Here\'s why:.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'Analysis:.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'Let me explain:.*?(?=The best matched staff member|Sorry, from my observation|$)',
-            r'\d+\.\s+.*?(?=The best matched staff member|Sorry, from my observation|$)',  # Numbered explanations
-            r'\*\*.*?\*\*',  # Remove markdown bold text often used in explanations
-            r'Alright,.*?(?=\w+\s+has|$)',                                    
-            r'Okay, let\'s figure out.*?(?=\w+\s+has|$)',                    
-            r'Looking at the list:.*?(?=\w+\s+has|$)',                       
-            r'I\'ll go through.*?(?=\w+\s+has|$)',                          
-            r'Looking at the provided staff directory.*?(?=\w+\s+has|$)'     
-        ] + [
-            f'{starter}.*?(?=The best matched staff member|Sorry, from my observation|$)'
-            for starter in [
-                '<think>', 'Thinking:', 'Let me analyze', 'Let me see',
-                'Let me check', 'Let me look', 'Let me find', 'Let me help',
-                'First I need to', 'First, I need to', 'I need to',
-                'I will first', 'I will check', 'I will look', 'I will search',
-                'I will find', 'To answer this', 'Let\'s look at', 'Let\'s see',
-            ]
-        ]
-        
-        # Apply all patterns
-        for pattern in explanation_patterns:
-            text = re.sub(pattern, '', text, flags=re.DOTALL | re.IGNORECASE)
-        
-        # Store staff links before cleaning
-        staff_links = []
-        seen_staff_ids = set()  # Track which staff IDs we've seen
-        staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">[^<]+</a>'
-        
-        # Find all staff links but only keep first occurrence for each staff ID
+        # Process staff links
         for match in re.finditer(staff_link_pattern, text):
             staff_id = match.group(1)
             if staff_id not in seen_staff_ids:
                 seen_staff_ids.add(staff_id)
                 staff_links.append(match.group(0))
                 text = text.replace(match.group(0), f'STAFFLINK_{len(staff_links)-1}_PLACEHOLDER')
-            else:
-                # Remove duplicate staff links
-                text = text.replace(match.group(0), '')
         
-        # Clean up formatting but preserve staff link placeholders
-        text = re.sub(r'(Question:|Answer:|Human:|Assistant:|</think>|First,|Initially,|Finally,|In conclusion,|Therefore,|So,|As a result,)', '', text)
+        # Final cleanup of formatting
         text = re.sub(r'\n+', ' ', text)
         text = re.sub(r'\s+', ' ', text)
         
@@ -206,23 +180,23 @@ class AIAssistant:
         for i, link in enumerate(staff_links):
             text = text.replace(f'STAFFLINK_{i}_PLACEHOLDER', link)
         
-        # After all other cleaning, remove duplicate sentences
+        # Remove duplicate sentences
         sentences = text.split('.')
         unique_sentences = []
+        seen_sentences = set()
         for sentence in sentences:
             sentence = sentence.strip()
-            if sentence and sentence not in unique_sentences:
+            if sentence and sentence.lower() not in seen_sentences:
                 unique_sentences.append(sentence)
-        text = '. '.join(unique_sentences)
+                seen_sentences.add(sentence.lower())
         
-        # Ensure response starts with expected patterns and remove duplicates
-        if "The best matched staff member" in text:
-            parts = text.split("The best matched staff member")
-            if len(parts) > 2:  # If there are multiple occurrences
-                text = "The best matched staff member" + parts[1]  # Keep only the first occurrence
-        elif "Sorry, from my observation" in text:
-            if not text.strip().startswith("Sorry, from my observation"):
-                text = "Sorry, from my observation" + text.split("Sorry, from my observation")[1]
+        text = '. '.join(unique_sentences)
+        if text and not text.endswith('.'):
+            text += '.'
+            
+        # Final safety check: If we've mangled the response too much, return a simple fallback
+        if len(text.strip()) < 10 and staff_links:
+            text = f"The best matched staff member is {staff_links[0]}."
         
         return text.strip()
 
@@ -276,6 +250,7 @@ YOU MUST FOLLOW THIS EXACT FORMAT:
 - ANY other thoughts or analysis
 </think>
 
+FINAL_ANSWER:
 [SINGLE CLEAN RESPONSE WITH NO ANALYSIS OR GREETING]
 
 Here is our staff directory:
@@ -309,11 +284,12 @@ Important matching guidelines:
 - The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
 - If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
 - Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
-- IMPORTANT: You MUST  "<think>" followed by your reasoning process, then "</think>" before providing your final answer.your final output however must not include the <think> tags or your thought process.
+- IMPORTANT: You MUST start with "<think>" followed by your reasoning process, then "</think>" BEFORE THE TEXT "FINAL_ANSWER:", which must then be followed by your final answer with no thinking or analysis.
 - IMPORTANT: For staff mentions you MUST use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 - IMPORTANT: include the current availability status of each staff member you mention in your response.
 - IMPORTANT: you must NOT simply make deciscions based on the intital information you see ragarding staff members, you MUST make a thotough check of ALL the information WITHIN the staff members profiles to ensure you are making the most accurate and correct decision possible.
 - IMPORTANT: verify your response before returning it to ensure you are not making any mistakes or errors in your response.
+- THE WORDS "FINAL_ANSWER:" MUST APPEAR EXACTLY ONCE IN YOUR RESPONSE, AFTER ALL THINKING AND BEFORE THE ACTUAL ANSWER
 - 'THINKING' SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
 - ANALYSIS, REASONING AND STAFF COMPARISONS SHOULD BE DONE IN THE BACKGROUND AND NOT INCLUDED IN THE FINAL OUTPUT
 - FINAL OUTPUT MUST BE A DIRECT AND CONCISE ANSWER TO THE USER QUERY
@@ -365,7 +341,33 @@ Question: {user_query} [/INST]"""
                     else:
                         generated_text += chunk.get("generated_text", "")
 
+                # First clean via the clean_response method
                 cleaned_response = self.clean_response(generated_text)
+                
+                # Secondary safeguard: If internal reasoning is still visible
+                reasoning_indicators = [
+                    "let me", "i will", "looking at", "analyzing", "based on", "considering", 
+                    "first", "initially", "thinking", "let's see", "i see that", "i understand",
+                    "after reviewing", "here's what", "the user is asking", "okay, so the user"
+                ]
+                
+                if any(indicator in cleaned_response.lower() for indicator in reasoning_indicators):
+                    # Extract just the final answer if possible
+                    for pattern in ["The best matched staff member", "Sorry, from my observation"]:
+                        if pattern in cleaned_response:
+                            cleaned_response = pattern + cleaned_response.split(pattern, 1)[1]
+                            break
+                    
+                    # If we still have reasoning, make a more aggressive cleanup
+                    if any(indicator in cleaned_response.lower() for indicator in reasoning_indicators):
+                        # Find any staff links
+                        staff_link_match = re.search(r'<a href="/staff/\d+" class="staff-link">[^<]+</a>', cleaned_response)
+                        availability_match = re.search(r'(?:Available|Unavailable[^\.]*)', cleaned_response)
+                        
+                        if staff_link_match:
+                            staff_link = staff_link_match.group(0)
+                            availability = f". Status: {availability_match.group(0)}" if availability_match else ""
+                            cleaned_response = f"The best matched staff member is {staff_link}{availability}."
                 
                 # Always store in history for all request types
                 self.add_to_history(user_query, is_user=True)
