@@ -604,7 +604,7 @@ def staff_dashboard(request):
             status = request.POST.get('current_status')
             skills = request.POST.get('skills')
 
-            # Handle profile pics
+            # Handle pfp 
             if request.FILES.get('profile_picture'):
                 staff_profile.profile_picture = request.FILES['profile_picture']
             

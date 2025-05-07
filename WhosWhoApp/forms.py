@@ -8,7 +8,7 @@ class AdminStaffProfileForm(forms.ModelForm):
         widget=forms.Textarea(attrs={
             'class': 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500',
             'rows': 6,
-            'placeholder': 'Describe your roles and responsibilities...'
+            'placeholder': 'tell us about yourself'
         })
     )
     monday_hours = forms.CharField(required=False, widget=forms.TextInput(attrs={
@@ -66,12 +66,12 @@ class AdminStaffProfileForm(forms.ModelForm):
             'about_me': forms.Textarea(attrs={
                 'class': 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500',
                 'rows': 6,
-                'placeholder': 'Tell us about yourself, your role, and what you do...'
+                'placeholder': 'Tell us about your role/s and responsibilities'
             }),
             'bio': forms.Textarea(attrs={
                 'class': 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500',
                 'rows': 6,
-                'placeholder': 'Enter a brief bio...'
+                'placeholder': 'Tell us about yourself'
             })
         }
 
@@ -81,7 +81,7 @@ class StaffProfileForm(forms.ModelForm):
         widget=forms.Textarea(attrs={
             'class': 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500',
             'rows': 3,
-            'placeholder': 'Describe your roles and responsibilities...'
+            'placeholder': 'Tell us about yourself'
         })
     )
     username = forms.CharField(widget=forms.TextInput(attrs={

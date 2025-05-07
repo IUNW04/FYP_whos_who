@@ -2,7 +2,6 @@ import os
 import asyncio
 import concurrent.futures
 from huggingface_hub import InferenceClient
-from datetime import datetime
 
 from django.conf import settings
 from ..models import StaffProfile
@@ -11,6 +10,10 @@ import re
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
+
+
+
+
 
 class AIAssistant:
     # Status constants
@@ -26,13 +29,16 @@ class AIAssistant:
         else:
             self.client = None
 
+
     def add_to_history(self, message, is_user=True):
+
         self.conversation_history.append({
             'role': 'user' if is_user else 'assistant',
             'content': message
         })
 
     def get_availability_status(self, staff):
+
         if staff.status == self.STATUS_AVAILABLE:
             return "Available"
         elif staff.custom_status:
@@ -41,9 +47,7 @@ class AIAssistant:
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=2, min=4, max=20))
     def _make_api_request(self, prompt):
-        # Force database to refresh staff data
-        StaffProfile.objects.all().select_for_update(skip_locked=True)
-        
+
         base_params = {
             "prompt": prompt,
             "stream": False,
@@ -55,10 +59,10 @@ class AIAssistant:
         model_configs = {
             "deepseek": {
                 "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                "temperature": 0.6,
-                "max_new_tokens": 250,
+                "temperature": 0.3,
+                "max_new_tokens": 150,
                 "repetition_penalty": 1.1,
-                "timeout": 30
+                "timeout": 20
             },
             "mistral": {
                 "model": "mistralai/Mistral-Nemo-Instruct-2407",
@@ -68,6 +72,7 @@ class AIAssistant:
                 "timeout": 10
             }
         }
+        
 
         def try_model(model_type):
             config = model_configs[model_type]
@@ -90,90 +95,88 @@ class AIAssistant:
             logging.info("Switching to Mistral model")
             return try_model("mistral")
 
+
+
+
     def clean_response(self, text):
-        """
-        Clean the AI response to ensure:
-        - No internal reasoning or step-by-step analysis is present.
-        - No repeated expertise/skills.
-        - Only relevant staff are mentioned, using the required HTML format.
-        - Output is concise and directly answers the user query.
-        """
-        # Remove all <think>...</think> blocks
-        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
-
-        # Extract content after FINAL_ANSWER:
-        final_answer_match = re.search(r'FINAL_ANSWER:(.*)', text, re.DOTALL)
-        if final_answer_match:
-            text = final_answer_match.group(1).strip()
-        else:
-            # If FINAL_ANSWER not found, use the whole text (fallback)
-            text = text.strip()
-
-        # Remove any leftover reasoning phrases
-        reasoning_patterns = [
-            r'(?i)(okay|alright|let me|i will|looking at|based on|considering|i see that|i notice that|i understand that|i can help|i checked|here\'s what|after reviewing|thinking|analyzing|first|initially|to answer this|from my analysis|the user is (?:asking|looking for|trying to find|wants to know)|comparing the staff|among the available staff)[\s,:-]*'
-        ]
-        for pattern in reasoning_patterns:
-            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
-
-        # Remove duplicated skill/expertise phrases
-        text = re.sub(r'(with expertise in [^\.]+)\.?\s+\1', r'\1', text, flags=re.IGNORECASE)
-        text = re.sub(r'(who specializes in [^\.]+)\.?\s+\1', r'\1', text, flags=re.IGNORECASE)
-
-        # Only keep the first mention of "The best matched staff member is ..."
-        best_match_pattern = r'(The best matched staff member is [^\.]+\.)'
-        matches = re.findall(best_match_pattern, text)
-        if matches:
-            text = matches[0] + text.split(matches[0], 1)[-1]
-            # Remove any further duplicate "The best matched staff member is ..." phrases
-            text = re.sub(best_match_pattern, '', text, count=1)
-
-        # Remove any "_staff" or similar tokens
-        text = re.sub(r'_staff', '', text)
-
-        # Remove any remaining duplicated sentences (simple heuristic)
-        sentences = []
-        seen = set()
-        for s in re.split(r'(?<=\.)\s+', text):
-            s_clean = s.strip()
-            if s_clean and s_clean.lower() not in seen:
-                sentences.append(s_clean)
-                seen.add(s_clean.lower())
-        text = ' '.join(sentences)
-
-        # Remove any leftover HTML or markdown not matching staff link format
-        text = re.sub(r'<[^a][^>]*>', '', text)  # Remove all tags except <a ...>
-
-        # Normalize whitespace and periods
-        text = re.sub(r'\s+', ' ', text)
-        text = re.sub(r'\.{2,}', '.', text)
-        text = re.sub(r'\s*\.\s*', '. ', text)
-
-        # Final cleanup: remove any leading/trailing whitespace or periods
-        text = text.strip(' .')
-
-        return text + '.'
-
-    def format_conversation_history(self):
-        """Format the conversation history for inclusion in prompts"""
-        if not self.conversation_history:
-            return ""
-            
-        formatted_history = "Recent conversation history:\n"
-        for message in self.conversation_history[-5:]:  # Limit to last 5 messages to avoid context overflow
-            role = "User" if message["role"] == "user" else "Assistant"
-            formatted_history += f"{role}: {message['content']}\n\n"
+        # Store staff links and verify names
+        staff_links = []
+        staff_link_pattern = r'<a href="/staff/(\d+)" class="staff-link">([^<]+)</a>'
         
-        return formatted_history
+        def get_correct_name(staff_id):
+            try:
+                staff = StaffProfile.objects.get(id=staff_id)
+                return staff.name
+            except StaffProfile.DoesNotExist:
+                return '[Unknown Staff]'
+        
+        # Replace any mismatched names in staff links
+        def replace_with_correct_name(match):
+            staff_id = match.group(1)
+            correct_name = get_correct_name(staff_id)
+            return f'<a href="/staff/{staff_id}" class="staff-link">{correct_name}</a>'
+        
+        text = re.sub(staff_link_pattern, replace_with_correct_name, text)
+        
+        # Expanded list of patterns to remove explanations and thinking
+        explanation_patterns = [
+            r'Step-by-step explanation:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Understanding the Query:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Here\'s why:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Analysis:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'Let me explain:.*?(?=The most qualified person|Sorry, from my observation|$)',
+            r'\d+\.\s+.*?(?=The most qualified person|Sorry, from my observation|$)',  # Numbered explanations
+            r'\*\*.*?\*\*',  # Remove markdown bold text often used in explanations
+        ] + [
+            f'{starter}.*?(?=The most qualified person|Sorry, from my observation|$)'
+            for starter in [
+                '<think>', 'Thinking:', 'Let me analyze', 'Let me see',
+                'Let me check', 'Let me look', 'Let me find', 'Let me help',
+                'First I need to', 'First, I need to', 'I need to',
+                'I will first', 'I will check', 'I will look', 'I will search',
+                'I will find', 'To answer this', 'Let\'s look at', 'Let\'s see',
+            ]
+        ]
+        
+        # Apply all patterns
+        for pattern in explanation_patterns:
+            text = re.sub(pattern, '', text, flags=re.DOTALL | re.IGNORECASE)
+        
+        # Store staff links before cleaning
+        staff_links = []
+        staff_link_pattern = r'a href="/staff/\d+" class="staff-link"[^/]+/a'
+        matches = re.finditer(staff_link_pattern, text)
+        for i, match in enumerate(matches):
+            staff_links.append(match.group(0))
+            text = text.replace(match.group(0), f'STAFFLINK_{i}_PLACEHOLDER')
+        
+        # Clean up formatting but preserve staff link placeholders
+        text = re.sub(r'(Question:|Answer:|Human:|Assistant:|</think>|First,|Initially,|Finally,|In conclusion,|Therefore,|So,|As a result,)', '', text)
+        text = re.sub(r'\n+', ' ', text)
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Restore staff links
+        for i, link in enumerate(staff_links):
+            text = text.replace(f'STAFFLINK_{i}_PLACEHOLDER', link)
+        
+        # Ensure response starts with expected patterns and remove duplicates
+        if "The most qualified person" in text:
+            parts = text.split("The most qualified person")
+            if len(parts) > 2:
+                text = "The most qualified person" + parts[1]
+            if not text.strip().startswith("The most qualified person"):
+                text = "The most qualified person" + text.split("The most qualified person")[1]
+        elif "Sorry, from my observation" in text:
+            if not text.strip().startswith("Sorry, from my observation"):
+                text = "Sorry, from my observation" + text.split("Sorry, from my observation")[1]
+        
+        return text.strip()
 
     def generate_prompt(self, user_query, staff_info, context_text=None, is_email_request=False):
-        # Get formatted conversation history
-        conversation_context = self.format_conversation_history()
 
         if is_email_request:
             return f"""<s>[INST] Recent conversation context:
-{conversation_context}
-{context_text or ""}
+{context_text}
 
 Write a professional email:
 - Concise and friendly.
@@ -192,66 +195,42 @@ Best regards,
 
 [/INST]"""
         else:
-            return f"""<s>[INST] {conversation_context}
-IMPORTANT: You MUST wrap ALL your analysis, greetings, and thinking process in "<think>" tags before providing your final answer.
-YOU MUST FOLLOW THIS EXACT FORMAT:
-<think>
-[PUT ALL YOUR THINKING HERE, INCLUDING:]
-- Initial greeting
-- Analysis of the query
-- Review of staff profiles
-- Reasoning about matches
-- ANY other thoughts or analysis
-</think>
-
-FINAL_ANSWER:
-[SINGLE CLEAN RESPONSE WITH NO ANALYSIS OR GREETING]
-
-Here is our staff directory:
+            return f"""<s>[INST] Here is our staff directory:
 
 {staff_info}
 
+STRICT RESPONSE FORMAT REQUIREMENTS:
 
-RESPONSE GUIDELINES:
+- ALWAYS MENTION THE BEST MATCHED STAFF REGARDLESS OF THEIR AVAILABILITY STATUS
+- ONLY NAME AN ALTERNATIVE IF THEY ARE AVAILABLE, AND THEIR ROLES OR SKILLS ARE RELATED TO THE USERS QUERY
+- MUST NOT MENTION ANY MATCHED ALTERNATIVE STAFF MEMBERS IF THEY ARE UNAVAILABLE
+- THE MENTION OF BEST MATCHED STAFF IS NOT DEPENDANT ON AVAILABILITY
+- USE THE EXACT HTML FORMAT PROVIDED BELOW FOR STAFF LINKS
+- IN YOUR RESPONSE DO NOT INCLUDE YOUR THOUGHT PROCESS
+- KEEP YOUR RESPONSE CONCISE 
+- USERS MAY MAKE TYPOS SO TRY TO NORMALISE THE TEXT OF THE USER QUERY AS MUCH AS POSSIBLE
 
-### Staff Selection
-- Always mention the best matched staff member, regardless of their availability.
-- Only mention an alternative if they are available **and** their roles or skills are relevant to the user's query.
-- If the best matched staff member is available, do **not** mention any alternative staff members.
-- Do **not** mention unavailable alternative staff members.
-- Alternative staff member mentions (if applicable) must be limited to one.
 
-### Output Formatting
-- Use the exact HTML format for staff links: `<a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>`.
-- Explicitly include the current availability [Status] of each staff member you mention.
-- Do **not** include your thought process, greetings, or internal reasoning in the final output.
-- The final output must be a direct and concise answer to the user query.
-- Keep responses concise but mention relevant expertise, skills, roles, and other useful information.
+Important matching guidelines:
+- Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x” relates to "domain x” which relates to “tool x” and staff x has this tool in his skillset therefore he is a match)
+- Look for both exact matches and semantically related skills in staff profiles
+- Consider the broader context of roles and how they relate to the requested expertise
+- ONLY mention an alternative if they are available and their skills or roles are related to the user query. when mentioning an alternative staff member, make sure to ONLY mention the skills of theirs that are MOST relevant to the user query. If their skills are not directly or strongly related to the user query, do not mention that staff member as an alternative at all.
+- The best match is the staff member whose skills and roles are most relevant to the user query. If its close, choose the staff member with the most skills related to the user query OR the staff member with the most relevant roles related to the user query. Put yourself in the users shoes and think about who would be the best person to help them. roles and skills both compliment each other so consider both when making a decision. best match usually has a good combination of relevant roles and skills.
+- If you mention skills as part of the reason for best match or alternative (if any), make sure to ONLY mention their skills that are MOST relevant to the user query.
+- Be consistant with your matching. Different phrasing of the same query should result in the same staff member being mentioned. 
+Format your concise responses using these exact patterns:
 
-### Matching Process
-- Use your knowledge to understand relationships between similar skills and terms (e.g., "domain x" relates to "domain x" which relates to "tool x" and staff x has this tool in his skillset therefore he is a match)
-- Normalize user queries to account for typos.
-- For academic, research, or qualification queries, thoroughly check the staff member's [About] section for accuracy.
-- Do **not** make decisions based only on initial information; check all details and fields in all staff profiles.
-- Use both exact and semantically related skills/roles for matching.
-- If skills are mentioned, only include those most relevant to the user query.
-- Be consistent: similar queries should yield the same staff member.
-- The best match is the staff member with the most relevant combination of roles and skills.
+1. For staff mentions, use: <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a>
 
-### Reasoning & Verification
-- All analysis, reasoning, and staff comparisons must be wrapped in `<think>...</think>` tags and **not** included in the final output.
-- The words `FINAL_ANSWER:` must appear exactly once, after all thinking and before the actual answer.
-- Verify your response before returning to ensure accuracy and correctness.
+2. If best match is unavaible mention them however also mention the alternative if there is one AND if they are available):
+"The most qualified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]. However, since they are unavailable, <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) can help because [reason]. Their status is: [Status]."
 
-### Real-Time Data
-- Always check the real-time availability status of staff members before responding.
+3. If best match is available AND if no alternatives OR if there are no alternatives that are available):
+"The most qualified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]."
 
-### Example output/response: format:
-- "The most quyalified person for this request is <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> ([Role]) because [reason]. Their current status is: [Status]."
-- Note: Format may change based on the query, but the structure should remain consistent. you MUST ALWAYS use <a href="/staff/{{staff_id:NUMBER}}" class="staff-link">[Name]</a> for staff links.
-**Summary:**  
-- Only the final, concise answer should be output.  
-- Absolutely no internal reasoning, greeting, or analysis should appear in the final output.
+4. When no one has any skills or roles that match the user query in any way:
+"Sorry, from my observation, I do not see anyone in the database that can help you with your query, please look for external help."
 
 Question: {user_query} [/INST]"""
 
@@ -260,8 +239,10 @@ Question: {user_query} [/INST]"""
             return "AI assistant is currently unavailable. Please contact the administrator to set up the Hugging Face API token."
 
         try:
-            # Force fresh query of staff data
-            all_staff = StaffProfile.objects.all().select_for_update(skip_locked=True)
+            # Reset conversation history for each new query to prevent caching effects
+            self.conversation_history = []
+            
+            all_staff = StaffProfile.objects.all()
             staff_info = "\n".join([
                 f"Staff Member: {staff.name}"
                 f"\nPrimary Role: {staff.role}"
@@ -271,7 +252,6 @@ Question: {user_query} [/INST]"""
                 f"\nAbout: {staff.about_me or 'Not specified'}"
                 f"\nStatus: {self.get_availability_status(staff)}"
                 f"\nEmail: {staff.email}"
-                f"\nLocation: {staff.location or 'Not specified'}"
                 f"\nID: {staff.id}\n"
                 for staff in all_staff
             ])
@@ -284,9 +264,8 @@ Question: {user_query} [/INST]"""
 
             logging.debug(f"User Query: {user_query}, Detected Email Request: {is_email_request}")
 
-            # Add timestamp to force unique prompts
-            timestamp = datetime.now().isoformat()
-            prompt = self.generate_prompt(f"{user_query} [Timestamp: {timestamp}]", staff_info, None, is_email_request)
+            recent_context = None  # Remove context for non-email requests
+            prompt = self.generate_prompt(user_query, staff_info, recent_context, is_email_request)
 
             try:
                 response = self._make_api_request(prompt)
@@ -298,11 +277,12 @@ Question: {user_query} [/INST]"""
                         generated_text += chunk.get("generated_text", "")
 
                 cleaned_response = self.clean_response(generated_text)
-
-                # Always store in history for all request types
-                self.add_to_history(user_query, is_user=True)
-                self.add_to_history(cleaned_response, is_user=False)
-
+                
+                # Only store history for email requests
+                if is_email_request:
+                    self.add_to_history(user_query, is_user=True)
+                    self.add_to_history(cleaned_response, is_user=False)
+                
                 return cleaned_response
 
             except Exception as api_error:

@@ -499,7 +499,7 @@
             // Focus the input field when the page loads
             chatInput.focus();
             
-            // Add initial message
+            // Add initial msg
             function addMessage(text, isUser, staffInfo = null) {
                 // Create wrapper div for the message and icon
                 const wrapperDiv = document.createElement('div');
@@ -509,7 +509,7 @@
                 const iconElement = document.createElement('i');
                 iconElement.className = `fas ${isUser ? 'fa-user' : 'fa-robot'} message-icon`;
                 
-                // Create message div
+                // Create msg div
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
                 
@@ -529,10 +529,10 @@
                     
                     // Create paragraph for the message text
                     const messagePara = document.createElement('p');
-                    messagePara.innerHTML = text; // Use innerHTML for AI responses to render HTML
+                    messagePara.innerHTML = text; // Usin innerHTML for AI responses to render html
                     messageDiv.appendChild(messagePara);
                     
-                    // Add View Profile buttons if staff info is provided
+                    // Add View prfile buttons if staff info is provided
                     if (staffInfo) {
                         // Create a container for the buttons
                         const buttonsContainer = document.createElement('div');
@@ -541,10 +541,10 @@
                         buttonsContainer.style.gap = '10px';
                         buttonsContainer.style.marginTop = '10px';
                         
-                        // Handle both single staff object and array of staff objects
+                        // Handle both single staff object nd array of staff objects
                         const staffList = Array.isArray(staffInfo) ? staffInfo : [staffInfo];
                         
-                        // Limit to at most 2 staff members (1 primary and 1 alternative)
+                        // Limit to at most 2 staff members (1 primary and 1 alternative (if apliccabel))
                         const limitedStaffList = staffList.slice(0, 2);
                         
                         // Create a button for each staff member
