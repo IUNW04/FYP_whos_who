@@ -142,5 +142,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 
 # Hugging Face settings
-HUGGINGFACE_API_TOKEN = os.environ.get('HUGGINGFACE_API_TOKEN', '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')
+HUGGINGFACE_API_TOKEN = os.environ.get('HUGGINGFACE_API_TOKEN', '')
 HUGGINGFACE_MODEL_NAME = os.environ.get('HUGGINGFACE_MODEL_NAME', 'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B')
